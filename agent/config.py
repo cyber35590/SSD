@@ -44,4 +44,4 @@ class Config(configparser.ConfigParser):
         return json.loads(super().get(item[0], item[1]))
 
 
-config = Config.instanciate("agent/config.cfg")
+config = Config.instanciate("agent/config_example.cfg")
