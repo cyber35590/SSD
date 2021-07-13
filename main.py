@@ -1,4 +1,4 @@
-from agent.config import config, log
+from common.config_base import config, log
 from agent.archive import make_archive
 
 

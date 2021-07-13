@@ -1,6 +1,6 @@
 import json
 
-from .config import log, config
+from common.config_base import log, config
 from .archive import make_archive
 import os
 import time

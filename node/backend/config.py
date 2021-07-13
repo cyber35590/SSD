@@ -1,3 +1,4 @@
+import os
 import json
 import configparser
 import logging as log
@@ -22,20 +23,17 @@ class Config(configparser.ConfigParser):
         if isinstance(files, str): files=[files]
         self.files=files
         self.read(self.files)
+        print(self.sections())
+        print(os.getcwd())
+        back = self.get_backup_dir()
+        if not os.path.exists(back):
+            os.mkdir(back, 0o700)
+        if not os.path.isdir(back):
+            raise Exception("Erreur le chemin spécifié n'est pas un dossier : '%s'" % back)
 
-    def get_backup_dirs(self):
-        try:
-            return self[Config.DIRS, "path"]
-        except Exception as err:
-            log.error("impossible de trouver la liste des dossier à sauvegarder")
-            raise Exception()
 
-    def get_temp_dir(self):
-        try:
-            return self[Config.DIRS, "temp"]
-        except Exception as err:
-            log.error("impossible de trouver le dossier temporaire")
-            raise Exception()
+    def get_backup_dir(self):
+        return self[Config.DIRS, "backup"]
 
 
     def __getitem__(self, item):
@@ -43,4 +41,4 @@ class Config(configparser.ConfigParser):
 
 
 
-config = Config.instanciate("agent/config_example.cfg")
+config = Config.instanciate("config_example.cfg")

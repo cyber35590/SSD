@@ -4,7 +4,7 @@ import os
 import hashlib
 
 
-from .config import log
+from common.config_base import log
 
 _CHARACTERS="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123789"
 
