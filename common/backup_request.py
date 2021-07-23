@@ -24,17 +24,17 @@ class BackupRequest:
         elif isinstance(data, dict):
             js=data
         else:
-            raise Exception("Impoosible de charger la requête, le paramètre du constructeur est invalide", (str, bytes, dict), type(data))
+            raise SSD_BadParameterType("Impoosible de charger la requête, le paramètre du constructeur est invalide", (str, bytes, dict), type(data))
 
         self.creation_date = js_param(data, BackupRequest.K_CREATION_DATE, time.time())
-        self.size = js_param(data, BackupRequest.K_SIZE)
-        self.hash = js_param(data, BackupRequest.K_HASH)
-        self.agent = js_param(data, BackupRequest.K_AGENT)
-        self.agent_url = js_param(data, BackupRequest.K_AGENT_URL)
-        self.backup_name = js_param(data, BackupRequest.K_BACKUP_NAME)
-        self.forward = js_param(data, BackupRequest.K_FORWRAD)
+        self.size = js_param(js, BackupRequest.K_SIZE)
+        self.hash = js_param(js, BackupRequest.K_HASH)
+        self.agent = js_param(js, BackupRequest.K_AGENT)
+        self.agent_url = js_param(js, BackupRequest.K_AGENT_URL)
+        self.backup_name = js_param(js, BackupRequest.K_BACKUP_NAME)
+        self.forward = js_param(js, BackupRequest.K_FORWRAD)
 
-    def dict(self):
+    def __dict__(self):
         return {
             BackupRequest.K_CREATION_DATE: self.creation_date ,
             BackupRequest.K_SIZE: self.size,
@@ -46,6 +46,6 @@ class BackupRequest:
         }
 
     def json(self):
-        return json.dumps(self.dict())
+        return json.dumps(dict(self))
 
 

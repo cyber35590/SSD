@@ -9,7 +9,6 @@ import requests
 #time.strftime("%Y_%m_%d-%H_%M_%S")
 
 class Node:
-
     def __init__(self, url):
         self.url = url if url[-1]=="/" else (url+"/")
         #state
@@ -65,7 +64,10 @@ class Node:
         #Todo
 
 
+class BackupEntry:
 
+    def __init__(self, name):
+        pass
 
 
 class Agent:

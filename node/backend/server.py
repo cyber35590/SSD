@@ -63,6 +63,7 @@ class Handler:
         du = shutil.disk_usage(config.get_backup_dir())
         left_after = du.total - du.used - bcr.size
         thresold = 0.05 * du.total
+
         if left_after < thresold:
             missing = thresold - left_after
             return SSDE_NoFreeSpace(missing)
@@ -71,8 +72,9 @@ class Handler:
             return SSDE_RessourceExists("Le backup '%s' existe déja" % bcr.hash)
 
         backup = Backup.from_request(bcr)
-
-        backup
+        return SSDE_OK({
+            "token": backup.request_token
+        })
 
 
 

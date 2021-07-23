@@ -1,9 +1,56 @@
 import json
 import configparser
 import logging as log
+from ..common.error import *
 
 FORMAT = '%(asctime)-15s %(message)s'
 log.basicConfig(format=FORMAT, level=log.DEBUG)
+
+class Option:
+    def __init__(self, k, v):
+        self.name = k
+        self.value=v
+
+class Section(dict):
+    def __init__(self, name, content):
+        super().__init__()
+        self.name = name
+        for k in content:
+            self[k]=Option(k, content[k])
+
+
+
+
+
+class Parameter:
+
+    def __init__(self, name, mandatory=True, default=None):
+        self.name=name
+        self.mandatory=mandatory
+        self.default=default
+
+    def get_value(self, section, section_default):
+        if self.name in section: return section[self.name]
+        if self.name in section_default: return section_default[self.name]
+        if self.mandatory:
+            raise SSD_ConfigMissingParam("Valeur manquante dans la configuration: %s.%s "%(self.sectionname, self.name))
+        return self.default
+
+
+class BackupEntry:
+    DEFAULT=[
+             Parameter("path"),
+             Parameter("default_url"),
+             Parameter("fallback_urls")
+    ]
+
+    def __init__(self, section, default):
+        self.section_name
+        for opt in BackupEntry.DEFAULT:
+            setattr(self, opt.name, opt.get_value(section, default))
+
+
+
 
 class Config(configparser.ConfigParser):
     DIRS="dirs"
@@ -22,10 +69,17 @@ class Config(configparser.ConfigParser):
         if isinstance(files, str): files=[files]
         self.files=files
         self.read(self.files)
+        self.entries={}
+        sections = self.sections()
+        for sec in sections:
+            sec = Section(self._sections[sec])
+            self.entries[sec]=BackupEntry(sec, )
 
-    def get_backup_dirs(self):
+
+
+    def get_backup_dirs(self, entryname):
         try:
-            return self[Config.DIRS, "path"]
+            return self[entryname, "path"]
         except Exception as err:
             log.error("impossible de trouver la liste des dossier à sauvegarder")
             raise Exception()

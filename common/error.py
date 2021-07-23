@@ -4,8 +4,8 @@ from .utils import format_size
 
 
 class SSD_BadFormatException(Exception): pass
-cla
-
+class SSD_BadParameterType(Exception): pass
+class SSD_ConfigMissingParam(Exception): pass
 
 class SSDError:
 
