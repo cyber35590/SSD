@@ -7,7 +7,6 @@ import requests
 from common import utils
 from common.backup_request import BackupRequest
 from django.db import models
-from django.http import HttpRequest
 
 from .config import config
 
@@ -84,9 +83,9 @@ class Backup(models.Model):
     agent = models.CharField(max_length=256) # ex "Mairie"
     backup_name = models.CharField(max_length=256) # ex "images" -> Mairie.images
     agent_url = models.TextField() # ex "https://mairie.ville-lhermitage:8000/"
-    forward_left = models.ManyToManyField(Node, blank=True)
-    forward_done = models.ManyToManyField(Node,blank=True)
-    src_node = models.ManyToManyField(Node,blank=True)
+    forward_left = models.ManyToManyField(Node, blank=True, related_name="forwarded")
+    forward_done = models.ManyToManyField(Node,blank=True, related_name="done")
+    src_node = models.ManyToManyField(Node,blank=True, related_name="backups")
     is_complete = models.BooleanField(default=False)
     request_token = models.CharField(max_length=256, null=True, blank = True)
 
@@ -112,7 +111,7 @@ class Backup(models.Model):
 
     @staticmethod
     def from_token(token):
-        res = Backup.objects.filter(backup__request_token=token)
+        res = Backup.objects.filter(request_token__exact=token)
 
         if len(res): return res[0]
         return None
@@ -129,6 +128,6 @@ class Backup(models.Model):
 
     @classmethod
     def exists(cls, hash):
-        ret = cls.objects.filter(backup__hash=hash)
+        ret = cls.objects.filter(hash__exact=hash)
         return len(ret) > 0
 

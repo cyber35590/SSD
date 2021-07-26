@@ -2,15 +2,12 @@
 import datetime
 import os
 import time
-import uuid
-
-import requests
-from ...common.backup_request import BackupRequest
+"""
+from common import utils
+from common.backup_request import BackupRequest
 from django.db import models
-from django.http import HttpRequest
-from ...common import utils
 from .config import config
-
+from .node import Node
 
 def abs_backup(*chemin):
     return os.path.abspath(os.path.join(config.get_backup_dir(), *chemin))
@@ -25,9 +22,9 @@ class Backup(models.Model):
     agent = models.CharField(max_length=256) # ex "Mairie"
     backup_name = models.CharField(max_length=256) # ex "images" -> Mairie.images
     agent_url = models.TextField() # ex "https://mairie.ville-lhermitage:8000/"
-    forward_left = models.ManyToManyField(blank=True)
-    forward_done = models.ManyToManyField(blank=True)
-    src_node = models.ManyToManyField(blank=True)
+    forward_left = models.ManyToManyField(Node, blank=True)
+    forward_done = models.ManyToManyField(Node,blank=True)
+    src_node = models.ManyToManyField(Node,blank=True)
     is_complete = models.BooleanField(default=False)
     request_token = models.CharField(max_length=256, null=True, blank = True)
 
@@ -72,3 +69,5 @@ class Backup(models.Model):
     def exists(cls, hash):
         ret = cls.objects.filter(backup__hash=hash)
         return len(ret) > 0
+"""
+

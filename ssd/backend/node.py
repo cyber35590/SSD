@@ -1,12 +1,10 @@
-import os
 import time
 
 import requests
 from django.db import models
-from django.http import HttpRequest
 
-from ...common.utils import INF
-
+from common.utils import INF
+"""
 class Node(models.Model):
     RATE_TEST_SIZE = 128*1024 # Nombre d'octet à envoyer pour tester le débit
 
@@ -58,4 +56,7 @@ class Node(models.Model):
 
     def transmit(self, ):
         pass
+
+"""
+
 

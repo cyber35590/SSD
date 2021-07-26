@@ -1,17 +1,11 @@
-import os
-import time
 import shutil
-import requests
-from django.core.files.uploadhandler import FileUploadHandler
-from django.db import models
-from django.http import HttpRequest
-from .config import config
-from ...common.backup_request import BackupRequest
-from ...common.utils import disk_usgae_percent
-from ...common.error import *
-from .backup import Backup, abs_backup
-from ...common import utils
 
+from common.error import SSDE_NoFreeSpace, SSDE_RessourceExists, SSDE_OK, SSDE_NotFound, SSDE_MalformedRequest
+from django.core.files.uploadhandler import FileUploadHandler
+from .config import config
+from common.backup_request import BackupRequest
+from common import utils
+from .models import Backup, abs_backup
 
 from django import forms
 
@@ -57,7 +51,7 @@ class Handler:
 
 
     def handle_backup_request(self, data):
-        assert isinstance(data, bytes)
+        assert isinstance(data, dict)
         bcr = BackupRequest(data)
 
         du = shutil.disk_usage(config.get_backup_dir())
