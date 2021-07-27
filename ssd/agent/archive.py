@@ -5,7 +5,7 @@ import hashlib
 
 
 from agent.config import log
-
+from common.utils import sha3_512, mkdir_rec
 _CHARACTERS="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123789"
 
 def mk_temp_filename(size = 16):
@@ -15,25 +15,7 @@ def mk_temp_filename(size = 16):
     return out
 
 
-def sha3_512(filename):
-    hash_sha = hashlib.sha3_512()
-    with open(filename, "rb") as f:
-        for chunk in iter(lambda: f.read(4096), b""):
-            hash_sha.update(chunk)
-    return hash_sha.hexdigest()
 
-def mkdir_rec(path):
-    if os.path.exists(path):
-        if not os.path.isdir(path):
-            raise Exception("Erreur '%s' n'est pas un dossier....")
-    else:
-        parent = os.path.abspath(os.path.join(path, ".."))
-        if os.path.exists(path):
-            if not os.path.isdir(path):
-                raise Exception("Erreur '%s' n'est pas un dossier....")
-        else:
-            mkdir_rec(parent)
-        os.mkdir(path)
 
 
 

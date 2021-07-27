@@ -1,7 +1,7 @@
 import json
 import time
 
-from .utils import js_param
+from .utils import js_param, sha3_512_str
 from .error import *
 
 
@@ -33,6 +33,11 @@ class BackupRequest:
         self.agent_url = js_param(js, BackupRequest.K_AGENT_URL)
         self.backup_name = js_param(js, BackupRequest.K_BACKUP_NAME)
         self.forward = js_param(js, BackupRequest.K_FORWRAD)
+
+    def backup_hash(self):
+        return sha3_512_str("%s.%s.%d.%s" % (
+            self.agent, self.backup_name, self.creation_date, self.hash
+        ))
 
     def __dict__(self):
         return {

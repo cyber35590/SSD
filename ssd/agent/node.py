@@ -1,14 +1,14 @@
 import json
+import time
 
 import requests
+from common.error import *
 
 
 class Node:
+    RATE_BODY_LENGTH=1024*256
     def __init__(self, url):
         self.url = url if url[-1]=="/" else (url+"/")
-        #state
-        self.last_token = None
-        self.update_allowed = False
 
         #info
         self.name = None
@@ -20,41 +20,33 @@ class Node:
         pass
 
     def ping(self):
-        #Todo
-        pass
+        t1 = time.time()
+        res = requests.get(self.url+"ping")
+        self.ping = time.time() - t1
+        return self.ping
 
     def rate(self):
-        #Todo
-        pass
+        t1 = time.time()
+        res = requests.post(self.url+"ping", "0"*Node.RATE_BODY_LENGTH)
+        t = time.time()
+        self.rate = (time.time() - t1)/Node.RATE_BODY_LENGTH
+        return self.rate
+
 
     def request_backup(self, meta):
         metastr = json.dumps(meta)
         res = requests.post(self.url + "node/backup/request", data=metastr)
-        if res.status_code < 400:
-            resjoson = json.loads(res.content)
-            # {
-            #    "url" : URL_TO_UPDTE
-            #    "token": XXXXXXXXX
-            # }
-            self.update_allowed = False
-            self.last_token = resjoson["token"]
-            return True
-        return False
+        return SSDError.from_json(res.content)
 
-    def update(self, file):
-        if self.update_allowed:
-            headers = {
-                "X-upload-token": self.last_token
-            }
-            files = {
-                "archive": open(file, "rb")
-            }
-            res = requests.post(self.url + "node/backup", files=files, headers=headers)
-
-
-            self.update_allowed = False
-            self.last_token = None
-
+    def upload(self, file : str, token : str):
+        headers = {
+            "X-upload-token": token
+        }
+        files = {
+            "archive": open(file, "rb")
+        }
+        res = requests.post(self.url + "node/backup", files=files, headers=headers)
+        return SSDError.from_json(res.content)
 
             #Todo
         #Todo

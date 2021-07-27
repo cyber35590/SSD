@@ -1,8 +1,13 @@
+import hashlib
+import os
 import shutil
 
-from common.error import SSDE_NoFreeSpace, SSDE_RessourceExists, SSDE_OK, SSDE_NotFound, SSDE_MalformedRequest
+from common.error import *
+from common.utils import mkdir_rec, join
 from django.core.files.uploadhandler import FileUploadHandler
-from .config import config
+from django.http import HttpRequest
+
+from .config import config, log
 from common.backup_request import BackupRequest
 from common import utils
 from .models import Backup, abs_backup
@@ -53,6 +58,7 @@ class Handler:
     def handle_backup_request(self, data):
         assert isinstance(data, dict)
         bcr = BackupRequest(data)
+        log.info("Requête de sauvegarde pour %s.%s taille %s" % (bcr.agent,bcr.backup_name, format_size(bcr.size)))
 
         du = shutil.disk_usage(config.get_backup_dir())
         left_after = du.total - du.used - bcr.size
@@ -60,12 +66,16 @@ class Handler:
 
         if left_after < thresold:
             missing = thresold - left_after
+            log.error("Impossible d'effectuer la sauvegarde de %s.%s, %s d'espace de stockage manquant" %
+                      (bcr.agent,bcr.backup_name, format_size(missing)))
             return SSDE_NoFreeSpace(missing)
 
-        if Backup.exists(bcr.hash):
+        if Backup.exists(bcr.backup_hash()):
+            log.debug("La requête de sauvegarde a déjà été traitée")
             return SSDE_RessourceExists("Le backup '%s' existe déja" % bcr.hash)
 
         backup = Backup.from_request(bcr)
+        log.info("La sauvegarde de %s.%s (%s) est autorisée" %(bcr.agent,bcr.backup_name, format_size(bcr.size)))
         return SSDE_OK({
             "token": backup.request_token
         })
@@ -74,14 +84,35 @@ class Handler:
 
 
 
-    def handle_backup(self, token, req):
+    def handle_backup(self, req : HttpRequest):
+        log.debug("Envoi de sauvegarde")
+        if not "X-upload-token" in req.headers:
+            log.error("L'envoi de sauvegarde ne possède pas de token")
+            return SSDE_MalformedRequest("L'entête 'X-upload-token' n'est pas passée dans la requête", ["X-upload-token"])
+        token = req.headers["X-upload-token"]
+
         backup = Backup.from_token(token)
         if not backup:
+            log.error("Le token demandé (%s) ne correspond à aucune requête de sauvegarde connu" % token)
             raise SSDE_NotFound("La sauvegarde lié au token '%s' n'existe pas"%token, (token,))
 
-        form = UploadFileForm(req.POST, req.FILES)
-        if form.is_valid():
-            file = FileUploadHandler()
-        else:
-            return SSDE_MalformedRequest("Formulaire d'envoi de fichier malfromé")
+        log.info("Traitement de l'envoi de sauvegarde de %s.%s (%s)" %
+                 (backup.agent,backup.backup_name, format_size(backup.size)))
+        
+        path = backup.path
+        mkdir_rec(join(path, ".."))
+        ifd = req.FILES["archive"]
+        with open(path, "wb") as ofd:
+            hash_sha = hashlib.sha3_512()
+            for chunk in ifd.chunks():
+                ofd.write(chunk)
+                hash_sha.update(chunk)
 
+        calculated_hash = hash_sha.hexdigest()
+        if calculated_hash != backup.hash:
+            log.error("Erreur les codes de hachage ne correspondent pas (attendu: '%s', calculé: '%s'"%
+                      (backup.hash, calculated_hash))
+            return SSDE_CorruptedData("Le code de hachage ne correspond pas", [backup.hash, calculated_hash])
+
+        log.info("La sauvegarde a été correctement traité")
+        return SSDE_OK()

@@ -23,8 +23,6 @@ class Config(configparser.ConfigParser):
         if isinstance(files, str): files=[files]
         self.files=files
         self.read(self.files)
-        print(self.sections())
-        print(os.getcwd())
         back = self.get_backup_dir()
         if not os.path.exists(back):
             os.mkdir(back, 0o700)

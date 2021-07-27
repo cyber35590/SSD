@@ -1,3 +1,6 @@
+import datetime
+import hashlib
+import os
 import random
 import shutil
 
@@ -31,4 +34,39 @@ def format_size(n):
 
 _ID_CHARS="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-+_"
 def new_id(n=32):
-    return [random.choice(_ID_CHARS) for _ in range(n)]
+    return "".join([random.choice(_ID_CHARS) for _ in range(n)])
+
+
+def ts2sdate(ts):
+    return datetime.datetime.fromtimestamp(ts).strftime()
+
+
+
+def sha3_512(filename):
+    hash_sha = hashlib.sha3_512()
+    with open(filename, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_sha.update(chunk)
+    return hash_sha.hexdigest()
+
+def sha3_512_str(data):
+    hash_sha = hashlib.sha3_512()
+    hash_sha.update(bytes(data, encoding="utf8"))
+    return hash_sha.hexdigest()
+
+def mkdir_rec(path):
+    if os.path.exists(path):
+        if not os.path.isdir(path):
+            raise Exception("Erreur '%s' n'est pas un dossier....")
+    else:
+        parent = os.path.abspath(os.path.join(path, ".."))
+        if os.path.exists(path):
+            if not os.path.isdir(path):
+                raise Exception("Erreur '%s' n'est pas un dossier....")
+        else:
+            mkdir_rec(parent)
+        os.mkdir(path)
+
+
+def join(*pathes):
+    return os.path.normpath(os.path.join(*pathes))
