@@ -1,6 +1,7 @@
 import json
 import configparser
 import logging as log
+import os
 
 FORMAT = '%(asctime)-15s %(message)s'
 log.basicConfig(format=FORMAT, level=log.DEBUG)
@@ -56,6 +57,7 @@ class Config(configparser.ConfigParser):
     def __getitem__(self, item):
         return json.loads(super().get(item[0], item[1]))
 
-
-
-config = Config.instanciate("agent/config_example.cfg")
+config_files = ["agent/config.cfg", "agent/config_example.cfg"]
+if "AGENT_CONFIG" in os.environ:
+    config_files = os.environ.get("AGENT_CONFIG")
+config = Config.instanciate(config_files)

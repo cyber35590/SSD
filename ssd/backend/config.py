@@ -39,4 +39,9 @@ class Config(configparser.ConfigParser):
 
 
 
-config = Config.instanciate("config_example.cfg")
+config_files = ["config.cfg", "config_example.cfg"]
+
+if "SERVER_CONFIG" in os.environ:
+    config_files = os.environ.get("SERVER_CONFIG")
+
+config = Config.instanciate(config_files)
