@@ -19,7 +19,8 @@ class SSDError:
         [5, "Malformed request"],
         [6, "Unknown error"],
         [7, "No node available"],
-        [8, "Corrupted data"]
+        [8, "Corrupted data"],
+        [9, "Connection error"]
     ]
 
     SUCCESS=0
@@ -31,6 +32,7 @@ class SSDError:
     UNKNOWN_ERROR=6
     NO_NODE_AVAILABLE=7
     CORRUPTED_DATA=8
+    CONNECTION_ERROR=9
 
     def __init__(self, code, msg="Not set", args=None, data=None):
         if not args: args=[]
@@ -102,12 +104,12 @@ class SSDE_MalformedRequest(SSDError):
 
 
 class SSDE_UnknownError(SSDError):
-    HTTP_STATUS=-1
+    HTTP_STATUS=-SSDError.UNKNOWN_ERROR
     def __init__(self, msg="", args=[]):
         super().__init__(SSDError.UNKNOWN_ERROR, msg, args)
 
 class SSDE_NoNodeAvailable(SSDError):
-    HTTP_STATUS=-2
+    HTTP_STATUS=-SSDError.NO_NODE_AVAILABLE
     def __init__(self):
         super().__init__(SSDError.UNKNOWN_ERROR, "No node available", [])
 
@@ -119,5 +121,11 @@ class SSDE_CorruptedData(SSDError):
 
 
 class SSDE_NoFreeSpace(SSDError):
+    HTTP_STATUS=507
     def __init__(self, missing_space):
         super().__init__(SSDError.NO_FREE_SPACE, "Espace de stockage insuffisant (%s)" % format_size(missing_space), missing_space)
+
+class SSDE_ConnectionError(SSDError):
+    HTTP_STATUS = -SSDError.CONNECTION_ERROR
+    def __init__(self, msg, args=[]):
+        super().__init__(SSDError.CORRUPTED_DATA, msg, args)

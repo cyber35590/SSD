@@ -5,7 +5,7 @@ import time
 
 import requests
 from common import utils
-from common.backup_request import BackupRequest
+from common.backup_request import BackupRequest, ForwardRequest
 from django.db import models
 from common.error import *
 
@@ -17,10 +17,30 @@ from common.utils import INF, sha3_512_str
 def abs_backup(chemin):
     return os.path.abspath(os.path.join(config.get_backup_dir(), chemin))
 
+class Value(models.Model):
+    id = models.AutoField(primary_key=True, blank=True, unique=True)
+    key = models.TextField(null=True, blank=True)
+    value = models.TextField(null=True, blank=True)
+
+    def get(self):
+        return json.loads(self.value)
+
+    def set(self, data):
+        if isinstance(data, str):
+            self.value=data
+        else:
+            self.value = json.dumps(data)
+        self.save()
+        return data
+
+
+
 
 class Node(models.Model):
     RATE_TEST_SIZE = 128*1024 # Nombre d'octet à envoyer pour tester le débit
     UPDATE_MIN_TIME = 60*60
+
+    id = models.AutoField(primary_key=True, blank=True, unique=True)
 
     # nom du site
     site = models.CharField(max_length=256, null=True, blank=True)
@@ -41,22 +61,41 @@ class Node(models.Model):
     last_update = models.DateTimeField(default=datetime.datetime.fromtimestamp(0))
 
     def get(self, url, *args, **kwargs):
-        res = requests.get(self.url+url, *args, **kwargs)
+        assert (isinstance(url, str))
+        if len(url) and url[0] == '/':
+            url = url[1:]
+        url = self.url + url
+        try:
+            res = requests.get(url, *args, **kwargs)
+        except requests.exceptions.ConnectionError as err:
+            if isinstance(err.args[0], (Exception)):
+                err = err.args[0]
+            return SSDE_ConnectionError("Impossible de joindre le serveur (%s) : %s" % (url, err.reason), (url,))
         return SSDError.from_json(res.content)
 
     def post(self, url, *args, **kwargs):
-        res = requests.post(self.url+url, *args, **kwargs)
+        assert (isinstance(url, str))
+        if len(url) and url[0] == '/':
+            url = url[1:]
+        url = self.url + url
+        try:
+            res = requests.post(url, *args, **kwargs)
+        except requests.exceptions.ConnectionError as err:
+            if isinstance(err.args[0], (Exception)):
+                err = err.args[0]
+            return SSDE_ConnectionError("Impossible de joindre le serveur (%s) : %s" % (url, err.reason), (url,))
         return SSDError.from_json(res.content)
 
-    def update(self, force):
-        if self.last_update+datetime.timedelta(Node.UPDATE_MIN_TIME)>datetime.datetime.now() or   force:
+    def update(self, force=False):
+        if self.last_update.timestamp()+Node.UPDATE_MIN_TIME>datetime.datetime.now().timestamp()\
+                or force:
             self.update_infos()
             self.update_score()
             self.last_update = datetime.datetime.now()
             self.save()
 
     def update_infos(self):
-        ret = self.get("backend/nfos")
+        ret = self.get("/backend/infos")
         if ret.ok():
             self.site = ret["site"]
 
@@ -88,12 +127,18 @@ class Node(models.Model):
             self.ping = INF
             self.rate = 0.0
             return
-
-    def from_url(self, urls):
-        if isinstance(urls, (str)):
-            return Node.objects.get(url__exact=urls)
-        elif isinstance(urls, (list, tuple)):
-            return Node.objects.filter(url__in=urls)
+    @staticmethod
+    def from_url(url, create_if_not_exists=False):
+        if url[-1]!='/': url+="/"
+        if isinstance(url, (str)):
+            try:
+                return Node.objects.get(url__exact=url)
+            except Node.DoesNotExist as err:
+                if create_if_not_exists:
+                    x = Node(url=url)
+                    x.update()
+                    return x
+                return None
         raise SSD_BadParameterType()
 
 
@@ -110,6 +155,8 @@ def abs_backup(*chemin):
 
 
 class Backup(models.Model):
+    id = models.AutoField(primary_key=True, blank=True, unique=True)
+
     # date de création du backup (date de l'agent)
     creation_date = models.DateTimeField(default=0)
 
@@ -141,7 +188,7 @@ class Backup(models.Model):
     forward_done = models.ManyToManyField(Node,blank=True, related_name="done")
 
     # Noeud source (uniquement lorsque c'est une transmission d'un autre noeud, =null pour une réception d'un agent)
-    src_node = models.ManyToManyField(Node,blank=True, related_name="backups")
+    src_node = models.ForeignKey(Node,blank=True, related_name="backups", on_delete=models.CASCADE, null=True, default=None)
 
     # Est ce que l'on a récupéré l'archive de sauvegarde
     is_complete = models.BooleanField(default=False)
@@ -151,6 +198,8 @@ class Backup(models.Model):
 
     # hash de lu backup (identifie sur tous les neuds le même backup)
     backup_hash = models.CharField(max_length=256)
+
+
 
 
 
@@ -171,6 +220,21 @@ class Backup(models.Model):
                      backup_name=bc.backup_name,
                      request_token=token,
                      backup_hash=bc.backup_hash())
+
+        ret.save()
+
+        default_forward = config["nodes", "forward"]
+        if default_forward is None: default_forward=[]
+        to_forward = default_forward if (bc.forward is None) else bc.forward
+        for url in to_forward:
+            node = Node.from_url(url, True)
+            node.update()
+            node.save()
+            ret.forward_left.add(node)
+
+        if isinstance(bc, ForwardRequest):
+            ret.src_node = Node.from_url(url, True)
+
         ret.save()
         return ret
 
@@ -202,18 +266,5 @@ class Backup(models.Model):
 
         return len(ret) > 0
 
-
-class Value(models.Model):
-    key = models.TextField(null=True, blank=True)
-    value = models.TextField(null=True, blank=True)
-
-    def get(self):
-        return json.loads(self.value)
-
-    def set(self, data):
-        if isinstance(data, str):
-            self.value=data
-        else:
-            self.value = json.dumps(data)
-        self.save()
-        return data
+    def list_forward_left(self, exclude=""):
+        return list(map(lambda x: x.url, self.forward_left.filter(~Q(forward_left__exact=exclude))))

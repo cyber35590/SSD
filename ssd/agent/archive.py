@@ -27,7 +27,7 @@ def make_archive(tmpdir, files):
     assert os.path.isdir(tmpdir)
     with tarfile.open(path, "w|xz") as tar:
         for file in files:
-            log.debug("\tAjout du fichier '%s'"%file)
+            log.debug("Ajout du fichier '%s'"%file)
             tar.add(file)
     hash = sha3_512(path)
 

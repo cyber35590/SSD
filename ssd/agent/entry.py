@@ -50,12 +50,13 @@ class Entry:
     @staticmethod
     def from_config(entry):
         return  Entry({
-            "name": get_opt(entry, "name"),
+            "name": entry,
             "path": get_opt(entry, "path"),
             "node": get_opt(entry, "node"),
             "agent_url" : get_opt("url"),
             "temp_dir": get_opt(entry, "temp_dir"),
-            "fallback": get_opt(entry, "fallback")
+            "fallback": get_opt(entry, "fallback"),
+            "forward": get_opt(entry, "forward")
         })
 
     def __init__(self, data : dict):
@@ -66,7 +67,8 @@ class Entry:
         node = data["node"]
         fallback = data["fallback"] if data["fallback"] else []
         self.temp_dir = data["backup_dir"] if "backup_dir" in data else "temp"
-
+        self.forward = data["forward"] if "forward" in data else None
+        if isinstance(self.forward, str) : self.forward = [self.forward]
         self.nodes = list(map(lambda  x: Node(x), [node] + fallback))
 
     def create_archive(self):
@@ -92,18 +94,19 @@ class Entry:
             "size" : size,
             "hash" : hash,
             "backup_name" : self.name,
-            "agent_url" : self.agent_url
+            "agent_url" : self.agent_url,
+            "forward" : self.forward
         }
 
-        log.info("Requête de sauvegarde")
+        log.info("Requête de sauvegarde de %s.%s (%s)" % (config["global", "site"], self.name, format_size(size)))
         for node in self.nodes:
-            log.debug("Demande à '%s'" % str(node))
+            log.debug("Demande à '%s'" % (node.url))
             ret = node.request_backup(data)
             if ret.ok():
                 self.current_node = node
-                log.debug("\tSauvegarde autorisée sur '%s'"%node.url)
+                log.debug("Sauvegarde autorisée sur '%s'"%node.url)
                 return ret
-            log.debug("\tSauvegarde impossible sur '%s', raison: '%s'"%(node.url, ret.message))
+            log.debug("Sauvegarde impossible sur '%s', raison: '%s'"%(node.url, ret.message))
         log.critical("Erreur impossible de faire la sauvegarde, aucun noeud n'a pu répondre à la requête")
         return SSDE_NoNodeAvailable()
 

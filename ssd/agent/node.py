@@ -16,15 +16,33 @@ class Node:
         self.rate = None # débit en o/s
 
     def get(self, url, *args, **kwargs):
-        res = requests.get(self.url+url, *args, **kwargs)
+        assert(isinstance(url, str))
+        if len(url) and url[0]=='/':
+            url=url[1:]
+        url = self.url + url
+        try:
+            res = requests.get(url, *args, **kwargs)
+        except requests.exceptions.ConnectionError as err:
+            if isinstance(err.args[0], (Exception)):
+                err = err.args[0]
+            return SSDE_ConnectionError("Impossible de joindre le serveur (%s) : %s" %(url, err.reason), (url,))
         return SSDError.from_json(res.content)
 
     def post(self, url, *args, **kwargs):
-        res = requests.post(self.url+url, *args, **kwargs)
+        assert(isinstance(url, str))
+        if len(url) and url[0]=='/':
+            url=url[1:]
+        url = self.url + url
+        try:
+            res = requests.post(url, *args, **kwargs)
+        except requests.exceptions.ConnectionError as err:
+            if isinstance(err.args[0], (Exception)):
+                err = err.args[0]
+            return SSDE_ConnectionError("Impossible de joindre le serveur (%s) : %s" %(url, err.reason), (url,))
         return SSDError.from_json(res.content)
 
     def get_infos(self):
-        res = self.get(self.url+"backend/infos")
+        res = self.get("/node/infos")
         if res.ok():
             return res.data
         else:
@@ -35,7 +53,7 @@ class Node:
 
     def ping(self):
         t1 = time.time()
-        res = self.get(self.url+"backend/ping")
+        res = self.get("/node/ping")
         t =  time.time() - t1
         if res.ok():
             self.ping = t
@@ -45,7 +63,7 @@ class Node:
 
     def rate(self):
         t1 = time.time()
-        res = self.post(self.url+"backend/ping", "0"*Node.RATE_BODY_LENGTH)
+        res = self.post("/node/ping", "0"*Node.RATE_BODY_LENGTH)
         t = time.time()
         if res.ok():
             self.rate = (time.time() - t1)/Node.RATE_BODY_LENGTH
@@ -53,10 +71,10 @@ class Node:
             self.rate = None
         return self.rate
 
+
     def request_backup(self, meta):
         metastr = json.dumps(meta)
-        res = requests.post(self.url + "node/backup/request", data=metastr)
-        return SSDError.from_json(res.content)
+        return self.post("/node/backup/request", data=metastr)
 
     def upload(self, file : str, token : str):
         headers = {
@@ -65,8 +83,7 @@ class Node:
         files = {
             "archive": open(file, "rb")
         }
-        res = requests.post(self.url + "node/backup", files=files, headers=headers)
-        return SSDError.from_json(res.content)
+        return self.post("/node/backup", files=files, headers=headers)
 
             #Todo
         #Todo

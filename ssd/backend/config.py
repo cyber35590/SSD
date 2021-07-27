@@ -35,7 +35,12 @@ class Config(configparser.ConfigParser):
 
 
     def __getitem__(self, item):
-        return json.loads(super().get(item[0], item[1]))
+        val = super().get(item[0], item[1])
+        try:
+            return json.loads(val)
+        except json.decoder.JSONDecodeError as err:
+            return val
+
 
 
 

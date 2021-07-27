@@ -31,8 +31,8 @@ class ActionForward(Action):
         pass
 
     def run(self):
-        backup = Backup.objects.get(self.backupid)
-        node = Backup.objects.get(self.nodeid)
+        backup = Backup.objects.get(id=self.backupid)
+        node = Backup.objects.get(id=self.nodeid)
 
         res = self.get_token(backup)
 
@@ -42,6 +42,7 @@ class ActionForward(Action):
 
         token = res["token"]
         self.upload(backup.path, token)
+        exit(0)
         #todo
 
 
@@ -112,6 +113,7 @@ class Scheduler(Thread):
         while True:
             object = self.queue.dequeue()
             if object is None: return
+            object.run()
 
     def forward(self, backup, node):
         self.queue.enqueue(ActionForward(backup.id, node.id))
@@ -122,8 +124,7 @@ def init():
     inst.start()
 
 def forward_backup(bc):
-    pass
     inst = Scheduler.get_instance()
-    for node in bc.forward_left:
+    for node in bc.forward_left.all():
         inst.forward(bc, node)
 

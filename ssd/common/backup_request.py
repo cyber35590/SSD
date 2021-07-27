@@ -5,7 +5,6 @@ import time
 from .utils import js_param, sha3_512_str
 from .error import *
 
-from django.db.models import Q
 
 
 class BackupRequest:
@@ -57,6 +56,7 @@ class BackupRequest:
         return json.dumps(dict(self))
 
 
+
 class ForwardRequest(BackupRequest):
     K_SRC_NODE = 'src_node'
     def __init__(self, backup, myUrl):
@@ -67,7 +67,7 @@ class ForwardRequest(BackupRequest):
             BackupRequest.K_AGENT: backup.agent,
             BackupRequest.K_AGENT_URL: backup.agent_url,
             BackupRequest.K_BACKUP_NAME: backup.backup_name,
-            BackupRequest.K_FORWRAD: list(map(lambda x: x.url, backup.forward_left.filter(~Q(forward_left__exact=myUrl))))
+            BackupRequest.K_FORWRAD: backup.list_forward_left()
         })
         self.src_node = myUrl
 

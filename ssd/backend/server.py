@@ -49,7 +49,33 @@ class NodeManager:
             if node is None:
                 node = Node(url=url)
             node.update(force)
-        raise SSD_BadParameterType()
+        else:
+            raise SSD_BadParameterType()
+
+
+DEFAULT_CONFIG={
+    "nodes" : {
+        "forward" : [],
+        "fallback" : [],
+        "other" : []
+    }
+}
+
+def get_from_default_config(path):
+    if not path.startswith("config."): return None
+    keys = path.split(".")[1:]
+    if len(keys)<2: return None
+
+    curr=DEFAULT_CONFIG
+    for i in range(len(keys)):
+        key = keys[i]
+        if key in curr:
+            if isinstance(curr, (list, tuple, dict)) and key in curr:
+                curr=curr[key]
+            else:
+                return None
+    return curr
+
 
 
 class Server:
@@ -64,10 +90,16 @@ class Server:
 
     def __getitem__(self, item):
         val = Value.objects.filter(key__exact=item)
-        if len(val)==0: return None
-        assert(len(val)==1)
-        val=val[0]
-        return val.get()
+        if len(val)==0:
+            default = get_from_default_config(item)
+            if default is None:
+                return None
+            self[item] = default
+            return default
+        else:
+            assert(len(val)==1)
+            val=val[0]
+            return val.get()
 
     def __setitem__(self, item, value):
         val = Value.objects.filter(key__exact=item)
@@ -94,12 +126,12 @@ class Server:
                 val = config[section, opt]
                 self[key]=val
 
-        allnodes=( self["config.nodes.forward"] or []) + \
-                    (self["config.nodes.fallback"] or [])\
-                    (self["config.nodes.other"] or [])
+        allnodes=self["config.nodes.forward"]\
+                 +self["config.nodes.fallback"]\
+                 +self["config.nodes.other"]
 
-        #self.nodes.update(allnodes)
-        #self.nodes.update() # si il y a d'autres noeud qui ne sont pas dans la config
+        self.nodes.update(allnodes)
+        self.nodes.update() # si il y a d'autres noeud qui ne sont pas dans la config
 
 
 
@@ -144,7 +176,7 @@ class Server:
             log.error("Le token demandé (%s) ne correspond à aucune requête de sauvegarde connu" % token)
             raise SSDE_NotFound("La sauvegarde lié au token '%s' n'existe pas" % token, (token,))
 
-        if backup.is_complete():
+        if backup.is_complete:
             log.warn("Le token demandé (%s) a déja été traité" % token)
             raise SSDE_RessourceExists("La sauvegarde lié au token '%s' n'existe pas" % token)
 
@@ -177,4 +209,3 @@ class Server:
 
 def init():
     Server.get_instance()
-    exit(0)
