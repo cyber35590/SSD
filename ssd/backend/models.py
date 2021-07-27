@@ -7,8 +7,9 @@ import requests
 from common import utils
 from common.backup_request import BackupRequest
 from django.db import models
+from common.error import *
 
-from .config import config
+from .config import config, log
 
 from common.utils import INF, sha3_512_str
 
@@ -19,9 +20,10 @@ def abs_backup(chemin):
 
 class Node(models.Model):
     RATE_TEST_SIZE = 128*1024 # Nombre d'octet à envoyer pour tester le débit
+    UPDATE_MIN_TIME = 60*60
 
     # nom du site
-    site = models.CharField(max_length=256)
+    site = models.CharField(max_length=256, null=True, blank=True)
 
     # url de base du serveur
     url = models.CharField(max_length=256)
@@ -35,6 +37,33 @@ class Node(models.Model):
     # est connecte
     is_connected = models.BooleanField(default=False)
 
+    # date de la dernière mise à jour
+    last_update = models.DateTimeField(default=datetime.datetime.fromtimestamp(0))
+
+    def get(self, url, *args, **kwargs):
+        res = requests.get(self.url+url, *args, **kwargs)
+        return SSDError.from_json(res.content)
+
+    def post(self, url, *args, **kwargs):
+        res = requests.post(self.url+url, *args, **kwargs)
+        return SSDError.from_json(res.content)
+
+    def update(self, force):
+        if self.last_update+datetime.timedelta(Node.UPDATE_MIN_TIME)>datetime.datetime.now() or   force:
+            self.update_infos()
+            self.update_score()
+            self.last_update = datetime.datetime.now()
+            self.save()
+
+    def update_infos(self):
+        ret = self.get("backend/nfos")
+        if ret.ok():
+            self.site = ret["site"]
+
+        return ret
+
+
+    #todo mettre toutes les requete avec les méthodes get et post
     def update_score(self):
         t1 = time.time()
         res = requests.get(self.url+"/backend/ping")
@@ -44,7 +73,6 @@ class Node(models.Model):
             self.is_connected=False
             self.ping = INF
             self.rate = 0.0
-            self.save()
             return
 
         data = ""
@@ -59,15 +87,22 @@ class Node(models.Model):
             self.is_connected=False
             self.ping = INF
             self.rate = 0.0
-            self.save()
             return
-        self.save()
+
+    def from_url(self, urls):
+        if isinstance(urls, (str)):
+            return Node.objects.get(url__exact=urls)
+        elif isinstance(urls, (list, tuple)):
+            return Node.objects.filter(url__in=urls)
+        raise SSD_BadParameterType()
+
 
     def transmit_request(self, data):
         pass
 
     def transmit(self, ):
         pass
+
 
 
 def abs_backup(*chemin):
@@ -108,7 +143,7 @@ class Backup(models.Model):
     # Noeud source (uniquement lorsque c'est une transmission d'un autre noeud, =null pour une réception d'un agent)
     src_node = models.ManyToManyField(Node,blank=True, related_name="backups")
 
-    # Vrai si tous les noeuds ont reçus le backup
+    # Est ce que l'on a récupéré l'archive de sauvegarde
     is_complete = models.BooleanField(default=False)
 
     # le token de requete
@@ -157,9 +192,28 @@ class Backup(models.Model):
         os.remove(self.chemin)
         self.delete()
 
+    def complete(self):
+        self.is_complete=False
+        self.save()
+
     @classmethod
     def exists(cls, hash):
         ret = cls.objects.filter(backup_hash__exact=hash)
 
         return len(ret) > 0
 
+
+class Value(models.Model):
+    key = models.TextField(null=True, blank=True)
+    value = models.TextField(null=True, blank=True)
+
+    def get(self):
+        return json.loads(self.value)
+
+    def set(self, data):
+        if isinstance(data, str):
+            self.value=data
+        else:
+            self.value = json.dumps(data)
+        self.save()
+        return data

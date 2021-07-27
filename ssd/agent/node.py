@@ -3,7 +3,7 @@ import time
 
 import requests
 from common.error import *
-
+from agent.config import log
 
 class Node:
     RATE_BODY_LENGTH=1024*256
@@ -15,23 +15,43 @@ class Node:
         self.ping = None # ping en s
         self.rate = None # débit en o/s
 
-    def get_info(self):
-        #Todo
-        pass
+    def get(self, url, *args, **kwargs):
+        res = requests.get(self.url+url, *args, **kwargs)
+        return SSDError.from_json(res.content)
+
+    def post(self, url, *args, **kwargs):
+        res = requests.post(self.url+url, *args, **kwargs)
+        return SSDError.from_json(res.content)
+
+    def get_infos(self):
+        res = self.get(self.url+"backend/infos")
+        if res.ok():
+            return res.data
+        else:
+            log.error("impossible de récupérer les infos de '%s'. Raison : '%s' (%d)"%(
+                self.url, res.message, res.code
+            ))
+            return None
 
     def ping(self):
         t1 = time.time()
-        res = requests.get(self.url+"ping")
-        self.ping = time.time() - t1
+        res = self.get(self.url+"backend/ping")
+        t =  time.time() - t1
+        if res.ok():
+            self.ping = t
+        else:
+            self.ping = None
         return self.ping
 
     def rate(self):
         t1 = time.time()
-        res = requests.post(self.url+"ping", "0"*Node.RATE_BODY_LENGTH)
+        res = self.post(self.url+"backend/ping", "0"*Node.RATE_BODY_LENGTH)
         t = time.time()
-        self.rate = (time.time() - t1)/Node.RATE_BODY_LENGTH
+        if res.ok():
+            self.rate = (time.time() - t1)/Node.RATE_BODY_LENGTH
+        else:
+            self.rate = None
         return self.rate
-
 
     def request_backup(self, meta):
         metastr = json.dumps(meta)

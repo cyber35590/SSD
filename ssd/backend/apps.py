@@ -5,5 +5,6 @@ class BackendConfig(AppConfig):
     name = 'backend'
 
     def ready(self):
-
-        return super().ready()
+        from backend import server, scheduler
+        server.init()
+        scheduler.init()

@@ -5,7 +5,7 @@ import time
 import requests
 from django.db import models
 from django.http import HttpRequest
-
+"""
 
 class Value(models.Model):
     key = models.TextField(null=True, blank=True)
@@ -42,3 +42,4 @@ class Options:
     def exists(key):
         obj = Value.objects.filter(value__key=key)
         return obj and len(obj) >= 1
+"""

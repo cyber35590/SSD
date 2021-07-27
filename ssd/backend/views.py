@@ -7,7 +7,7 @@ from django.http import HttpResponse, HttpRequest, JsonResponse
 from django.shortcuts import render, get_object_or_404, get_list_or_404
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
 
-from backend.server import Handler
+from backend.server import Server
 from .config import config
 from common.error import *
 
@@ -34,15 +34,20 @@ def response(val):
 """
 
 def get_base(req):
-    return json.loads(req.body), Handler.get_instance()
+    return json.loads(req.body), Server.get_instance()
 
 @csrf_exempt
 def node_ping(request : HttpRequest):
     return response({"length" : len(request.body)})
 
 @csrf_exempt
-def node_backup_request(request : HttpRequest):
+def node_infos(request : HttpRequest):
+    return response({
 
+    })
+
+@csrf_exempt
+def node_backup_request(request : HttpRequest):
     if request.method == 'POST':
         data, hand = get_base(request)
         ret = hand.handle_backup_request(data)
@@ -54,16 +59,31 @@ def node_backup_request(request : HttpRequest):
 @csrf_exempt
 def node_backup(request : HttpRequest):
     if request.method == 'POST':
-        hand = Handler.get_instance()
+        hand = Server.get_instance()
         ret = hand.handle_backup(request)
         return response(ret)
     else:
         return response(SSDE_MalformedRequest("This url expected only POST requests"))
 
+
 @csrf_exempt
 def node_forward_request(request : HttpRequest):
-    pass
+    if request.method == 'POST':
+        data, hand = get_base(request)
+        ret = hand.handle_backup_request(data, True)
+        return response(ret)
+    else:
+        return response(SSDE_MalformedRequest("This url expected only POST requests"))
+
 
 @csrf_exempt
 def node_forward(request : HttpRequest):
-    pass
+    if request.method == 'POST':
+        hand = Server.get_instance()
+        ret = hand.handle_request(request)
+        return response(ret)
+    else:
+        return response(SSDE_MalformedRequest("This url expected only POST requests"))
+
+
+

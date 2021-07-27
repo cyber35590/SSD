@@ -90,7 +90,6 @@ class Qeue(list):
 
 
 class Scheduler(Thread):
-
     _INSTANCE=None
 
     @staticmethod
@@ -114,17 +113,16 @@ class Scheduler(Thread):
             object = self.queue.dequeue()
             if object is None: return
 
-
-
     def forward(self, backup, node):
         self.queue.enqueue(ActionForward(backup.id, node.id))
 
-
 def init():
+    pass
     inst = Scheduler.get_instance()
     inst.start()
 
-def forward_backup(bc : Backup):
+def forward_backup(bc):
+    pass
     inst = Scheduler.get_instance()
     for node in bc.forward_left:
         inst.forward(bc, node)
