@@ -116,18 +116,16 @@ class Scheduler(Thread):
 
 
 
-
-
-
-
-
-
+    def forward(self, backup, node):
+        self.queue.enqueue(ActionForward(backup.id, node.id))
 
 
 def init():
-    inst = DelayedAction.get_instance()
+    inst = Scheduler.get_instance()
     inst.start()
 
 def forward_backup(bc : Backup):
-    inst = DelayedAction.get_instance()
-    inst
+    inst = Scheduler.get_instance()
+    for node in bc.forward_left:
+        inst.forward(bc, node)
+

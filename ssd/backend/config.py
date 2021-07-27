@@ -22,7 +22,7 @@ class Config(configparser.ConfigParser):
         super().__init__()
         if isinstance(files, str): files=[files]
         self.files=files
-        self.read(self.files)
+        self.read(self.files, encoding='utf-8')
         back = self.get_backup_dir()
         if not os.path.exists(back):
             os.mkdir(back, 0o700)
