@@ -5,8 +5,11 @@ from . import views
 urlpatterns = [
     path('infos', views.node_infos),
     path('ping', views.node_ping),
-    path('backup/request', views.node_backup_request, name='index'),
-    path('backup', views.node_backup, name='index'),
-    path('forward/request', views.node_forward_request, name='index'),
-    path('forward', views.node_forward, name='index'),
+    path('backup/request', views.node_backup_request),
+    path('backup', views.node_backup),
+    path('forward/request', views.node_forward_request),
+    path('forward', views.node_forward),
+    path('list', views.node_list),
+    path('register', views.node_discover,),
+    path('query', views.node_query),
 ]

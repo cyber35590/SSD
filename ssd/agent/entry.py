@@ -61,7 +61,7 @@ class Entry:
 
     def __init__(self, data : dict):
         self.name = data["name"]
-        self.dirs = data["path"]
+        self.dirs = data["files"]
         self.agent_url = data["agent_url"]
         self.current_node = None
         node = data["node"]

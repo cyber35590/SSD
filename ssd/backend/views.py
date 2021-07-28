@@ -36,6 +36,37 @@ def node_infos(request : HttpRequest) -> HttpResponse:
     return response({
     })
 
+
+"""
+    Renvoi les urls de tous les noeuds connu localement
+
+"""
+
+
+@csrf_exempt
+def node_list(request: HttpRequest) -> HttpResponse:
+    # todo
+    pass
+
+"""
+    Permet à un autre noeud de se faire connaitre    
+"""
+@csrf_exempt
+def node_discover(request : HttpRequest) -> HttpResponse:
+    # todo
+    pass
+
+
+
+"""
+    Permet d'établir des requêts pour acquierir les finformations des autres noeud
+    
+"""
+@csrf_exempt
+def node_query(request : HttpRequest) -> HttpResponse:
+    # todo
+    pass
+
 @csrf_exempt
 def node_backup_request(request : HttpRequest) -> HttpResponse:
     if request.method == 'POST':
