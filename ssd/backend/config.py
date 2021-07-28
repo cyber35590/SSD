@@ -3,7 +3,7 @@ import json
 import configparser
 import logging as log
 
-FORMAT = '%(asctime)-15s %(message)s'
+FORMAT = '%(asctime)-15s|%(levelname)-8s %(message)s'
 log.basicConfig(format=FORMAT, level=log.DEBUG)
 
 class Config(configparser.ConfigParser):

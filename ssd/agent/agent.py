@@ -22,8 +22,8 @@ class Agent:
             self.entries[entry] = Entry.from_config(entry)
 
 
-    def backup(self, entry=None):
-
+    def backup(self, entry : Entry = None) -> None:
+        assert(isinstance(entry, Entry) or entry is None)
         if entry:
             self.entries[entry].backup()
         else:

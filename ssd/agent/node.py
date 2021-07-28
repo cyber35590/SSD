@@ -1,9 +1,11 @@
 import json
+import os.path
 import time
 
 import requests
 from common.error import *
 from agent.config import log
+from common import utils
 
 class Node:
     RATE_BODY_LENGTH=1024*256
@@ -15,33 +17,21 @@ class Node:
         self.ping = None # ping en s
         self.rate = None # débit en o/s
 
-    def get(self, url, *args, **kwargs):
+    def get(self, url, *args, **kwargs) -> SSDError:
         assert(isinstance(url, str))
         if len(url) and url[0]=='/':
             url=url[1:]
         url = self.url + url
-        try:
-            res = requests.get(url, *args, **kwargs)
-        except requests.exceptions.ConnectionError as err:
-            if isinstance(err.args[0], (Exception)):
-                err = err.args[0]
-            return SSDE_ConnectionError("Impossible de joindre le serveur (%s) : %s" %(url, err.reason), (url,))
-        return SSDError.from_json(res.content)
+        return utils.get(url, *args, **kwargs)
 
-    def post(self, url, *args, **kwargs):
+    def post(self, url, *args, **kwargs) -> SSDError:
         assert(isinstance(url, str))
         if len(url) and url[0]=='/':
             url=url[1:]
         url = self.url + url
-        try:
-            res = requests.post(url, *args, **kwargs)
-        except requests.exceptions.ConnectionError as err:
-            if isinstance(err.args[0], (Exception)):
-                err = err.args[0]
-            return SSDE_ConnectionError("Impossible de joindre le serveur (%s) : %s" %(url, err.reason), (url,))
-        return SSDError.from_json(res.content)
+        return utils.post(url, *args, **kwargs)
 
-    def get_infos(self):
+    def get_infos(self) -> dict:
         res = self.get("/node/infos")
         if res.ok():
             return res.data
@@ -51,7 +41,7 @@ class Node:
             ))
             return None
 
-    def ping(self):
+    def ping(self) -> float:
         t1 = time.time()
         res = self.get("/node/ping")
         t =  time.time() - t1
@@ -61,7 +51,7 @@ class Node:
             self.ping = None
         return self.ping
 
-    def rate(self):
+    def rate(self) -> float:
         t1 = time.time()
         res = self.post("/node/ping", "0"*Node.RATE_BODY_LENGTH)
         t = time.time()
@@ -72,11 +62,14 @@ class Node:
         return self.rate
 
 
-    def request_backup(self, meta):
+    def request_backup(self, meta : dict) -> SSDError:
         metastr = json.dumps(meta)
         return self.post("/node/backup/request", data=metastr)
 
-    def upload(self, file : str, token : str):
+    def upload(self, file : str, token : str) -> SSDError:
+        assert(isinstance(file, str))
+        assert(os.path.isfile(file))
+        assert(isinstance(token, str))
         headers = {
             "X-upload-token": token
         }
@@ -84,6 +77,3 @@ class Node:
             "archive": open(file, "rb")
         }
         return self.post("/node/backup", files=files, headers=headers)
-
-            #Todo
-        #Todo

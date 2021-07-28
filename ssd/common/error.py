@@ -1,6 +1,22 @@
 import json
 
-from .utils import format_size
+
+INF = float("inf")
+
+
+_STORAGE_UNIT=[
+    [1024, "Kio"],
+    [1024*1024, "Mio"],
+    [1024*1024*1024, "Gio"],
+    [1024*1024*1024*1024, "Tio"],
+]
+
+def format_size(n : (int, float)) -> str:
+    assert isinstance(n, (int, float))
+    for i in range(len(_STORAGE_UNIT)):
+        if n < _STORAGE_UNIT[i][0] or i==len(_STORAGE_UNIT)-1:
+            return "%.2f %s" % (n/_STORAGE_UNIT[i][0], _STORAGE_UNIT[i][1])
+    assert False
 
 
 class SSD_BadFormatException(Exception): pass
@@ -41,17 +57,34 @@ class SSDError:
         self.args=args # complément de l'erreur
         self.data = data # donne 
 
+    @staticmethod
+    def error_str(n : int) -> str:
+        for code, msg in SSDError.ERRORS:
+            if n == code:
+                return msg
+        return "Code d'erreur inconnue"
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return self.code==0
 
-    def ok(self):
+    def ok(self) -> bool:
         return self.code==0
 
-    def err(self):
+    def err(self) -> bool:
         return self.code!=0
 
-    def __getitem__(self, item):
+    def __repr__(self):
+        errstr = SSDError.error_str(self.code)
+        if self.args:
+            return "Erreur [%d : %s] : %s (args: %s)" % (self.code, errstr, self.message, *self.args)
+        else:
+            return "Erreur [%d : %s] : %s" % (self.code, errstr, self.message)
+
+    def __str__(self):
+        return self.__repr__()
+
+    def __getitem__(self, item : str):
+        assert(isinstance(item, str))
         if isinstance(self.data, dict):
             return self.data[item]
         if isinstance(self.data, (list, tuple)) and isinstance(item, int):
@@ -59,7 +92,7 @@ class SSDError:
         #todo
         raise Exception()
 
-    def to_json(self):
+    def to_json(self) -> dict:
         return {
             "code" : self.code,
             "data" : self.data,
@@ -68,14 +101,14 @@ class SSDError:
         }
 
     @staticmethod
-    def from_json(js):
+    def from_json(js : (str, bytes)):
         if isinstance(js, (str, bytes)):
             try:
                 js=json.loads(js)
                 return SSDError(js["code"], js["message"], js["args"], js["data"])
             except json.decoder.JSONDecodeError as e:
                 raise SSDE_MalformedJSON(js, e, "Impossible de charger l'erreur depuis le json")
-
+        raise SSD_BadParameterType("SSDError.from_json attend un (str,byte)")
 
 class SSDE_OK(SSDError):
     HTTP_STATUS=200
@@ -102,7 +135,6 @@ class SSDE_MalformedRequest(SSDError):
     def __init__(self, msg, args=[]):
         super().__init__(SSDError.MALFORMED_REQUEST, msg, args)
 
-
 class SSDE_UnknownError(SSDError):
     HTTP_STATUS=-SSDError.UNKNOWN_ERROR
     def __init__(self, msg="", args=[]):
@@ -128,4 +160,4 @@ class SSDE_NoFreeSpace(SSDError):
 class SSDE_ConnectionError(SSDError):
     HTTP_STATUS = -SSDError.CONNECTION_ERROR
     def __init__(self, msg, args=[]):
-        super().__init__(SSDError.CORRUPTED_DATA, msg, args)
+        super().__init__(SSDError.CONNECTION_ERROR, msg, args)

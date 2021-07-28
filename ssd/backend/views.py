@@ -11,14 +11,8 @@ from backend.server import Server
 from .config import config
 from common.error import *
 
-@csrf_exempt
-def index(request):
-    return HttpResponse("Hello, world. You're at the polls index.")
 
-
-
-
-def response(val):
+def response(val) -> JsonResponse:
     if isinstance(val, SSDError):
         if val.ok():
             return JsonResponse(val.to_json())
@@ -29,25 +23,21 @@ def response(val):
 
 
 
-"""
-    Appelé 
-"""
 
-def get_base(req):
+def get_base(req : HttpRequest):
     return json.loads(req.body), Server.get_instance()
 
 @csrf_exempt
-def node_ping(request : HttpRequest):
+def node_ping(request : HttpRequest) -> HttpResponse:
     return response({"length" : len(request.body)})
 
 @csrf_exempt
-def node_infos(request : HttpRequest):
+def node_infos(request : HttpRequest) -> HttpResponse:
     return response({
-
     })
 
 @csrf_exempt
-def node_backup_request(request : HttpRequest):
+def node_backup_request(request : HttpRequest) -> HttpResponse:
     if request.method == 'POST':
         data, hand = get_base(request)
         ret = hand.handle_backup_request(data)
@@ -57,7 +47,7 @@ def node_backup_request(request : HttpRequest):
 
 
 @csrf_exempt
-def node_backup(request : HttpRequest):
+def node_backup(request : HttpRequest) -> HttpResponse:
     if request.method == 'POST':
         hand = Server.get_instance()
         ret = hand.handle_backup(request)
@@ -67,7 +57,7 @@ def node_backup(request : HttpRequest):
 
 
 @csrf_exempt
-def node_forward_request(request : HttpRequest):
+def node_forward_request(request : HttpRequest) -> HttpResponse:
     if request.method == 'POST':
         data, hand = get_base(request)
         ret = hand.handle_backup_request(data, True)
@@ -77,7 +67,7 @@ def node_forward_request(request : HttpRequest):
 
 
 @csrf_exempt
-def node_forward(request : HttpRequest):
+def node_forward(request : HttpRequest) -> HttpResponse:
     if request.method == 'POST':
         hand = Server.get_instance()
         ret = hand.handle_request(request)

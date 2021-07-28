@@ -2,7 +2,7 @@ import datetime
 import json
 import os
 import time
-
+from django.db.models import Q
 import requests
 from common import utils
 from common.backup_request import BackupRequest, ForwardRequest
@@ -65,26 +65,14 @@ class Node(models.Model):
         if len(url) and url[0] == '/':
             url = url[1:]
         url = self.url + url
-        try:
-            res = requests.get(url, *args, **kwargs)
-        except requests.exceptions.ConnectionError as err:
-            if isinstance(err.args[0], (Exception)):
-                err = err.args[0]
-            return SSDE_ConnectionError("Impossible de joindre le serveur (%s) : %s" % (url, err.reason), (url,))
-        return SSDError.from_json(res.content)
+        return utils.get(url, *args, **kwargs)
 
     def post(self, url, *args, **kwargs):
         assert (isinstance(url, str))
         if len(url) and url[0] == '/':
             url = url[1:]
         url = self.url + url
-        try:
-            res = requests.post(url, *args, **kwargs)
-        except requests.exceptions.ConnectionError as err:
-            if isinstance(err.args[0], (Exception)):
-                err = err.args[0]
-            return SSDE_ConnectionError("Impossible de joindre le serveur (%s) : %s" % (url, err.reason), (url,))
-        return SSDError.from_json(res.content)
+        return utils.post(url, *args, **kwargs)
 
     def update(self, force=False):
         if self.last_update.timestamp()+Node.UPDATE_MIN_TIME>datetime.datetime.now().timestamp()\
@@ -103,12 +91,15 @@ class Node(models.Model):
 
 
     #todo mettre toutes les requete avec les méthodes get et post
-    def update_score(self):
+    def update_score(self) -> None:
         t1 = time.time()
-        res = requests.get(self.url+"/backend/ping")
-        if res.status_code == 200:
+        res = utils.get(self.url+"/backend/ping")
+        if res.ok():
             self.ping = (time.time() - t1) * 1000
         else:
+            log.error("Impossible de joindre le serveur '%s' (%s)"%(
+                    self.url + "/backend/rate", str(res)
+            ))
             self.is_connected=False
             self.ping = INF
             self.rate = 0.0
@@ -119,10 +110,13 @@ class Node(models.Model):
             data+="a"
 
         t1 = time.time()
-        res = requests.post(self.url+"/backend/rate")
-        if res.status_code == 200:
+        res = utils.post(self.url+"/backend/rate")
+        if res.ok():
             self.rate = Node.RATE_TEST_SIZE /  (time.time() - t1)
         else:
+            log.error("Impossible de joindre le serveur '%s' (%s)"%(
+                    self.url + "/backend/rate", str(res)
+            ))
             self.is_connected=False
             self.ping = INF
             self.rate = 0.0
@@ -141,12 +135,6 @@ class Node(models.Model):
                 return None
         raise SSD_BadParameterType()
 
-
-    def transmit_request(self, data):
-        pass
-
-    def transmit(self, ):
-        pass
 
 
 
@@ -197,6 +185,8 @@ class Backup(models.Model):
     request_token = models.CharField(max_length=256, null=True, blank = True)
 
     # hash de lu backup (identifie sur tous les neuds le même backup)
+    # C'est le hash des métadonnées et non de l'archive
+    # il est donc unique pour chaque sauvegarde (même si le fichier archive est le même)
     backup_hash = models.CharField(max_length=256)
 
 
@@ -222,22 +212,26 @@ class Backup(models.Model):
                      backup_hash=bc.backup_hash())
 
         ret.save()
+        #il est nécessaire d'entrer le ligne dans la base avant d'ajouter des clés ManyToMany
 
         default_forward = config["nodes", "forward"]
         if default_forward is None: default_forward=[]
+
+        #si la requête ne prévoit pas de champ 'forward' (ou forward=None)
+        # on prend les forwards par défaut du noeud
         to_forward = default_forward if (bc.forward is None) else bc.forward
         for url in to_forward:
-            node = Node.from_url(url, True)
-            node.update()
-            node.save()
+            # si le noeud n'est pas dans la base on le force (create_if_not_exists=True)
+            node = Node.from_url(url, create_if_not_exists=True)
+            node.update() #update fait le save
             ret.forward_left.add(node)
 
+        # on ajoute le src node si la requête est un forward
         if isinstance(bc, ForwardRequest):
             ret.src_node = Node.from_url(url, True)
 
         ret.save()
         return ret
-
 
     @staticmethod
     def from_token(token):
@@ -246,25 +240,26 @@ class Backup(models.Model):
         if len(res): return res[0]
         return None
 
-    def move(self, to):
+    def move(self, to) -> None:
         to = abs_backup(to)
         os.rename(self.chemin, to)
         self.chemin = to
         self.save()
 
-    def remove(self):
+    def remove(self) -> None:
         os.remove(self.chemin)
         self.delete()
 
-    def complete(self):
+    def complete(self) -> None:
         self.is_complete=False
         self.save()
 
     @classmethod
-    def exists(cls, hash):
+    def exists(cls, hash) -> bool:
         ret = cls.objects.filter(backup_hash__exact=hash)
 
         return len(ret) > 0
 
+    # permet d'avoir une liste avec les urls des noeuds restants
     def list_forward_left(self, exclude=""):
-        return list(map(lambda x: x.url, self.forward_left.filter(~Q(forward_left__exact=exclude))))
+        return list(map(lambda x: x.url, self.forward_left.filter(~Q(url__exact=exclude))))

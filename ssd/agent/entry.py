@@ -24,7 +24,7 @@ DEFAULT_ENTRY_PARAM = {
     "fallback" : None
 }
 
-def get_opt(entry, name=None):
+def get_opt(entry, name=None) :
     if name:
         try:
             return config[entry, name]
@@ -48,7 +48,7 @@ def get_opt(entry, name=None):
 class Entry:
 
     @staticmethod
-    def from_config(entry):
+    def from_config(entry : str):
         return  Entry({
             "name": entry,
             "path": get_opt(entry, "path"),
@@ -78,13 +78,18 @@ class Entry:
         return path, hash
 
 
-    def find_node_by_url(self, url : str):
+    def find_node_by_url(self, url : str) -> (Node, None):
+        assert(isinstance(url, str))
+        if url[-1]!='/': url+="/"
         for node in self.nodes:
             if node.url==url:
                 return node
         return None
 
-    def get_token(self, path, hash):
+    def get_token(self, path : str, hash : str) -> SSDError :
+        assert(isinstance(path, str))
+        assert(isinstance(hash, str))
+        assert(os.path.isfile(path))
         self.current_node = None
         size = os.path.getsize(path)
         data = {
@@ -110,13 +115,17 @@ class Entry:
         log.critical("Erreur impossible de faire la sauvegarde, aucun noeud n'a pu répondre à la requête")
         return SSDE_NoNodeAvailable()
 
-    def upload(self, file :str, token : str):
+    def upload(self, file : str, token : str) -> SSDError:
+        assert(isinstance(file, str))
+        assert(os.path.isfile(file))
+        assert(isinstance(file, str))
+
         ret = self.current_node.upload(file, token)
         if ret.err():  return ret
         self.current_node=None
         return ret
 
-    def backup(self):
+    def backup(self) -> None:
         path, hash = self.create_archive()
         res = self.get_token(path, hash)
 

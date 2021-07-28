@@ -36,12 +36,12 @@ class BackupRequest:
         self.backup_name = js_param(js, BackupRequest.K_BACKUP_NAME)
         self.forward = js_param(js, BackupRequest.K_FORWRAD)
 
-    def backup_hash(self):
+    def backup_hash(self) -> str:
         return sha3_512_str("%s.%s.%d.%s" % (
             self.agent, self.backup_name, self.creation_date, self.hash
         ))
 
-    def __dict__(self):
+    def __dict__(self) -> dict:
         return {
             BackupRequest.K_CREATION_DATE: self.creation_date ,
             BackupRequest.K_SIZE: self.size,
@@ -52,8 +52,8 @@ class BackupRequest:
             BackupRequest.K_FORWRAD: self.forward,
         }
 
-    def json(self):
-        return json.dumps(dict(self))
+    def json(self) -> str:
+        return json.dumps(self.__dict__())
 
 
 
@@ -61,7 +61,7 @@ class ForwardRequest(BackupRequest):
     K_SRC_NODE = 'src_node'
     def __init__(self, backup, myUrl):
         super().__init__({
-            BackupRequest.K_CREATION_DATE: backup.creation_date,
+            BackupRequest.K_CREATION_DATE: backup.creation_date.timestamp(),
             BackupRequest.K_SIZE: backup.size,
             BackupRequest.K_HASH: backup.hash,
             BackupRequest.K_AGENT: backup.agent,
@@ -71,7 +71,7 @@ class ForwardRequest(BackupRequest):
         })
         self.src_node = myUrl
 
-    def __dict__(self):
+    def __dict__(self) -> dict:
         tmp = super().__dict__()
         tmp[ForwardRequest.K_SRC_NODE] = self.src_node
         return tmp
