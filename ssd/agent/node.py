@@ -31,7 +31,7 @@ class Node:
         url = self.url + url
         return utils.post(url, *args, **kwargs)
 
-    def get_infos(self) -> dict:
+    def get_infos(self) -> (dict, None):
         res = self.get("/node/infos")
         if res.ok():
             return res.data

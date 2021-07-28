@@ -28,19 +28,19 @@ def get_opt(entry, name=None) :
     if name:
         try:
             return config[entry, name]
-        except:
+        except KeyError:
             pass
 
         try:
             return config["global", name]
-        except:
+        except KeyError:
             pass
 
         if DEFAULT_ENTRY_PARAM[name] : return DEFAULT_ENTRY_PARAM[name]
     else:
         try:
             return config["global", entry]
-        except:
+        except KeyError:
             pass
 
     raise SSD_ConfigMissingParam("Erreur dans l'entrée '%s' le paramètre '%s' n'est pas défini"%(entry, name))
@@ -125,7 +125,7 @@ class Entry:
         self.current_node=None
         return ret
 
-    def backup(self) -> None:
+    def backup(self) -> SSDError:
         path, hash = self.create_archive()
         res = self.get_token(path, hash)
 
@@ -135,3 +135,4 @@ class Entry:
         res = self.upload(path, token)
 
         os.remove(path)
+        return res

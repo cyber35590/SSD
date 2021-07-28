@@ -22,10 +22,10 @@ class Value(models.Model):
     key = models.TextField(null=True, blank=True)
     value = models.TextField(null=True, blank=True)
 
-    def get(self):
+    def get(self) -> (dict, list, str, int, float, None):
         return json.loads(self.value)
 
-    def set(self, data):
+    def set(self, data) -> (dict, list, str, int, float, None):
         if isinstance(data, str):
             self.value=data
         else:
@@ -121,13 +121,14 @@ class Node(models.Model):
             self.ping = INF
             self.rate = 0.0
             return
+
     @staticmethod
     def from_url(url, create_if_not_exists=False):
         if url[-1]!='/': url+="/"
         if isinstance(url, (str)):
             try:
                 return Node.objects.get(url__exact=url)
-            except Node.DoesNotExist as err:
+            except Node.DoesNotExist:
                 if create_if_not_exists:
                     x = Node(url=url)
                     x.update()
@@ -135,11 +136,6 @@ class Node(models.Model):
                 return None
         raise SSD_BadParameterType()
 
-
-
-
-def abs_backup(*chemin):
-    return os.path.join(config.get_backup_dir(), *chemin)
 
 
 class Backup(models.Model):
@@ -228,7 +224,7 @@ class Backup(models.Model):
 
         # on ajoute le src node si la requête est un forward
         if isinstance(bc, ForwardRequest):
-            ret.src_node = Node.from_url(url, True)
+            ret.src_node = Node.from_url(bc.src_node, True)
 
         ret.save()
         return ret

@@ -3,8 +3,12 @@ import configparser
 import logging as log
 import os
 
+
 FORMAT = '%(asctime)-15s|%(levelname)-8s %(message)s'
 log.basicConfig(format=FORMAT, level=log.DEBUG)
+
+
+
 
 
 class Config(configparser.ConfigParser):
@@ -19,7 +23,8 @@ class Config(configparser.ConfigParser):
     def get_instance(self):
         return self._INSTANCE
 
-    def get_entries_name(self):
+    @staticmethod
+    def get_entries_name():
         EXCLUDE = ["global"]
         out = []
         for n in config.sections():
@@ -33,7 +38,6 @@ class Config(configparser.ConfigParser):
         self.files=files
         self.read(self.files)
         self.entries={}
-        sections = self.sections()
         #for sec in sections:
         #    sec = Section(self._sections[sec])
         #    self.entries[sec]=BackupEntry(sec, )
@@ -41,17 +45,17 @@ class Config(configparser.ConfigParser):
     def get_backup_dirs(self, entryname):
         try:
             return self[entryname, "path"]
-        except Exception as err:
-            log.error("impossible de trouver la liste des dossier à sauvegarder")
-            raise Exception()
+        except KeyError:
+            log.critical("impossible de trouver la liste des dossier à sauvegarder")
+            assert(False)
 
 
     def get_temp_dir(self):
         try:
             return self[Config.GLOBAL, "temp"]
-        except Exception as err:
-            log.error("impossible de trouver le dossier temporaire")
-            raise Exception()
+        except KeyError:
+            log.critical("impossible de trouver le dossier temporaire")
+            assert(False)
 
 
     def __getitem__(self, item):

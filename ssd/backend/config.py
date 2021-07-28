@@ -38,7 +38,7 @@ class Config(configparser.ConfigParser):
         val = super().get(item[0], item[1])
         try:
             return json.loads(val)
-        except json.decoder.JSONDecodeError as err:
+        except json.decoder.JSONDecodeError:
             return val
 
 

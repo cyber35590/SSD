@@ -2,6 +2,7 @@ import hashlib
 import os
 import shutil
 
+from common.utils import NoneType
 from backend import scheduler
 from common.error import *
 from common.utils import mkdir_rec, join
@@ -9,7 +10,7 @@ from django.core.files.uploadhandler import FileUploadHandler
 from django.http import HttpRequest
 
 from .config import config, log
-from common.backup_request import BackupRequest
+from common.backup_request import BackupRequest, ForwardRequest
 from common import utils
 from .models import Backup, abs_backup, Node, Value
 
@@ -103,10 +104,10 @@ class Server:
             val=val[0]
             return val.get()
 
-    def __setitem__(self, item : str , value : (dict, list, str, int, float, None)) \
-            -> (dict, list, str, int, float, None):
+    def __setitem__(self, item : str , value : (dict, list, str, int, float, NoneType)) \
+            -> (dict, list, str, int, float, NoneType):
         assert(isinstance(item, str))
-        assert(isinstance(value, (dict, list, str, int, float, None)))
+        assert(isinstance(value, (dict, list, str, int, float, NoneType)))
 
         val = Value.objects.filter(key__exact=item)
         if len(val)==0:
@@ -117,7 +118,7 @@ class Server:
 
     def __contains__(self, item : str) -> bool:
         val = Value.objects.filter(key__exact=item)
-        if len(val) == 0: return None
+        if len(val) == 0: return False
         return True
 
     def __init__(self):
@@ -163,7 +164,7 @@ class Server:
     def handle_backup_request(self, data : dict , isForward : bool = False) -> SSDError:
         assert isinstance(data, dict)
         assert isinstance(isForward, bool)
-        bcr =   ForwardREquest(data) if isForward else BackupRequest(data)
+        bcr =   ForwardRequest(data, config["infos", "url"]) if isForward else BackupRequest(data)
         log.info("Requête de sauvegarde pour %s.%s taille %s" % (bcr.agent,bcr.backup_name, format_size(bcr.size)))
 
         du = shutil.disk_usage(config.get_backup_dir())
@@ -221,7 +222,7 @@ class Server:
             raise SSDE_NotFound("La sauvegarde lié au token '%s' n'existe pas" % token, (token,))
 
         if backup.is_complete:
-            log.warn("Le token demandé (%s) a déja été traité" % token)
+            log.warning("Le token demandé (%s) a déja été traité" % token)
             raise SSDE_RessourceExists("La sauvegarde lié au token '%s' n'existe pas" % token)
 
         log.info("Traitement de l'envoi de sauvegarde de %s.%s (%s)" %

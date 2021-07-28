@@ -30,6 +30,7 @@ class Action:
         return self._error_count
 
     def is_valid(self)  -> bool:
+        #todo
         return True
 
     def run(self) -> None:
@@ -73,7 +74,7 @@ class ActionForward(Action):
         return self.post("/node/forward", files=files, headers=headers)
 
 
-    def run(self) -> None:
+    def run(self) -> SSDError:
         backup = Backup.objects.get(id=self.backupid)
         node = Node.objects.get(id=self.nodeid)
 
@@ -148,7 +149,7 @@ class Qeue(list):
 
 
 
-    def enqueue(self, x : Action)  -> None:
+    def enqueue(self, x : (Action, None))  -> None:
         assert(isinstance(x, Action))
         while True:
             with self.lock:

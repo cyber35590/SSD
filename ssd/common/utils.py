@@ -75,3 +75,5 @@ def post(url, *args, **kwargs) -> SSDError:
             err = err.args[0]
         return SSDE_ConnectionError("Impossible de joindre le serveur (%s) : %s" %(url, err.reason), (url,))
     return SSDError.from_json(res.content)
+
+NoneType=type(None)
