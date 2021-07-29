@@ -34,6 +34,11 @@ def node_ping(request : HttpRequest) -> HttpResponse:
 @csrf_exempt
 def node_infos(request : HttpRequest) -> HttpResponse:
     return response({
+        "site" : config["infos", "site"],
+        "forward" : config["nodes", "forward"],
+        "other" : config["nodes", "ooher"],
+        "fallback" : config["nodes", "fallback"],
+        "url" : config["infos", "url"]
     })
 
 

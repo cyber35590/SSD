@@ -61,7 +61,9 @@ def get(url, *args, **kwargs) -> SSDError:
     except requests.exceptions.ConnectionError as err:
         if isinstance(err.args[0], (Exception)):
             err = err.args[0]
-        return SSDE_ConnectionError("Impossible de joindre le serveur (%s) : %s" %(url, err.reason), (url,))
+            if hasattr(err, "reason"):
+                return SSDE_ConnectionError("Impossible de joindre le serveur (%s) : %s" %(url, err.reason), (url,))
+        return SSDE_ConnectionError(str(err))
     return SSDError.from_json(res.content)
 
 def post(url, *args, **kwargs) -> SSDError:

@@ -83,9 +83,9 @@ class Node(models.Model):
             self.save()
 
     def update_infos(self):
-        ret = self.get("/backend/infos")
+        ret = self.get("/node/infos")
         if ret.ok():
-            self.site = ret["site"]
+            self.site = ret["backup_name"]
 
         return ret
 
