@@ -165,10 +165,11 @@ class Server:
         assert isinstance(isForward, bool)
         bcr =   ForwardRequest(data, config["infos", "url"]) if isForward else BackupRequest(data)
         if isForward:
-            log.info("Requête de forward  (pour l'agent %s.%s) provenant du noeud %s taille %s" % (
-            bcr.agent, bcr.backup_name, bcr.src_node, format_size(bcr.size)))
+            log.info("[%s -> self] Requête de forward  (pour l'agent %s.%s) provenant du noeud %s taille %s" % (
+            bcr.get_source(), bcr.agent, bcr.backup_name, bcr.src_node, format_size(bcr.size)))
         else:
-            log.info("Requête de sauvegarde pour l'agent %s.%s taille %s" % (bcr.agent,bcr.backup_name, format_size(bcr.size)))
+            log.info("[%s -> self] Requête de sauvegarde pour l'agent %s.%s taille %s" % (
+                bcr.get_source(), bcr.agent,bcr.backup_name, format_size(bcr.size)))
 
         du = shutil.disk_usage(config.get_backup_dir())
         left_after = du.total - du.used - bcr.size
@@ -179,21 +180,23 @@ class Server:
         #
         if left_after < thresold:
             missing = thresold - left_after
-            log.error("Impossible d'effectuer la sauvegarde de %s.%s, %s d'espace de stockage manquant" %
-                      (bcr.agent,bcr.backup_name, format_size(missing)))
+            log.error("[%s -> self] Impossible d'effectuer la sauvegarde de %s.%s, %s d'espace de stockage manquant" %
+                          (bcr.get_source(), bcr.agent,bcr.backup_name, format_size(missing)))
             return SSDE_NoFreeSpace(missing)
 
         #
         # V2rification de la non existence de cette sauvegarde (via backup_hash)
         #
         if Backup.exists(bcr.backup_hash()):
-            log.debug("La requête de sauvegarde a déjà été traitée")
-            return SSDE_RessourceExists("Le backup '%s' existe déja" % bcr.hash)
+            log.debug("[%s -> self] La requête de sauvegarde a déjà été traitée" % bcr.get_source())
+            return SSDE_RessourceExists("[%s -> self] Le backup '%s' existe déja" % (
+                bcr.get_source(),bcr.hash))
 
 
         # Enregistrement dans la base de données du backup
         backup = Backup.from_request(bcr) # la fonction fait le save
-        log.info("La sauvegarde de %s.%s (%s) est autorisée" %(bcr.agent,bcr.backup_name, format_size(bcr.size)))
+        log.info("[%s -> self] La sauvegarde de %s.%s (%s) est autorisée" %(
+            bcr.get_source(), bcr.agent,bcr.backup_name, format_size(bcr.size)))
         return SSDE_OK({
             "token": backup.request_token
             # permet d'identifier pour la fonction update quelle à quelle sauvegarde le fichier uploadé est lié
@@ -211,7 +214,7 @@ class Server:
         En cas de réussite (sha3_512 correcte) transmettre la sauvegarde
         aux autres noeuds .
     """
-    def handle_backup(self, req : HttpRequest) -> SSDError:
+    def handle_backup(self, req : HttpRequest, isForward) -> SSDError:
         #vérifications
         log.debug("Récupération de sauvegarde")
         if not "X-upload-token" in req.headers:
@@ -222,20 +225,22 @@ class Server:
         backup = Backup.from_token(token)
 
         if not backup:
-            log.error("Le token demandé (%s) ne correspond à aucune requête de sauvegarde/forward connu" % token)
+            log.error("[%s -> self] Le token demandé (%s) ne correspond à aucune requête de sauvegarde/forward connu" % (
+                backup.get_source(),token))
             raise SSDE_NotFound("La sauvegarde lié au token '%s' n'existe pas" % token, (token,))
 
         if backup.is_complete:
-            log.warning("Le token demandé (%s) a déja été traité" % token)
+            log.warning("[%s -> self] Le token demandé (%s) a déja été traité" % (
+                backup.get_source(), token))
             raise SSDE_RessourceExists("La sauvegarde lié au token '%s' n'existe pas" % token)
 
 
         if isinstance(backup, ForwardRequest):
-            log.info("Traitement de la réception de du forward (de l'agent %s.%s) via le noeud %s (%s)" %
-                 (backup.agent,backup.backup_name, backup.src_node, format_size(backup.size)))
+            log.info("[%s -> self] Traitement de la réception de du forward (de l'agent %s.%s) via le noeud %s (%s)" %
+                 (backup.get_source(), backup.agent,backup.backup_name, backup.src_node, format_size(backup.size)))
         else:
-            log.info("Traitement de la réception de sauvegarde de %s.%s (%s)" %
-                 (backup.agent,backup.backup_name, format_size(backup.size)))
+            log.info("[%s -> self] Traitement de la réception de sauvegarde de %s.%s (%s)" %
+                 (backup.get_source(), backup.agent,backup.backup_name, format_size(backup.size)))
 
 
         #écriture du fichier et update du hash
@@ -251,12 +256,12 @@ class Server:
         #calcul du digest global
         calculated_hash = hash_sha.hexdigest()
         if calculated_hash != backup.hash:
-            log.error("Erreur les codes de hachage ne correspondent pas (attendu: '%s', calculé: '%s'"%
-                      (backup.hash, calculated_hash))
+            log.error("[%s -> self] Erreur les codes de hachage ne correspondent pas (attendu: '%s', calculé: '%s')"%
+                      (backup.get_source(), backup.hash, calculated_hash))
             return SSDE_CorruptedData("Le code de hachage ne correspond pas", [backup.hash, calculated_hash])
 
         backup.complete()
-        log.info("La sauvegarde a été correctement traité")
+        log.info("[%s -> self] La sauvegarde a été correctement traité" % backup.get_source())
 
         # forward aux autres noeuds via des actions différée
         if backup.forward_left is None: #None -> on transmet self.forward

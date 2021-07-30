@@ -77,7 +77,7 @@ def node_query(request : HttpRequest) -> HttpResponse:
 def node_backup_request(request : HttpRequest) -> HttpResponse:
     if request.method == 'POST':
         data, hand = get_base(request)
-        ret = hand.handle_backup_request(data)
+        ret = hand.handle_backup_request(data, False)
         return response(ret)
     else:
         return response(SSDE_MalformedRequest("This url expected only POST requests"))
@@ -87,7 +87,7 @@ def node_backup_request(request : HttpRequest) -> HttpResponse:
 def node_backup(request : HttpRequest) -> HttpResponse:
     if request.method == 'POST':
         hand = Server.get_instance()
-        ret = hand.handle_backup(request)
+        ret = hand.handle_backup(request, False)
         return response(ret)
     else:
         return response(SSDE_MalformedRequest("This url expected only POST requests"))
@@ -107,7 +107,7 @@ def node_forward_request(request : HttpRequest) -> HttpResponse:
 def node_forward(request : HttpRequest) -> HttpResponse:
     if request.method == 'POST':
         hand = Server.get_instance()
-        ret = hand.handle_backup(request)
+        ret = hand.handle_backup(request, True)
         return response(ret)
     else:
         return response(SSDE_MalformedRequest("This url expected only POST requests"))

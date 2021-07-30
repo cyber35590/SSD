@@ -285,6 +285,15 @@ class Backup(models.Model):
         return ret
 
 
+
+    def get_source(self):
+        if self.src_node:
+            return "%s(%s.%s)" % (self.src_node.name, self.agent, self.backup_name)
+        else:
+            return "%s.%s" % (self.agent, self.backup_name)
+
+
+
 class BackupError(models.Model):
     id = models.AutoField(primary_key=True, blank=True, unique=True)
     backup = models.ForeignKey(Backup, related_name="forward_error", on_delete=models.CASCADE)

@@ -56,7 +56,8 @@ class BackupRequest:
     def json(self) -> str:
         return json.dumps(self.__dict__())
 
-
+    def get_source(self):
+        return "%s.%s" % (self.agent, self.agent_url)
 
 class ForwardRequest(BackupRequest):
     K_SRC_NODE = 'src_node'
@@ -73,3 +74,5 @@ class ForwardRequest(BackupRequest):
         return tmp
 
 
+    def get_source(self):
+        return "%s [%s]" % (self.src_node, super().get_source())
