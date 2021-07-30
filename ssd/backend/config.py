@@ -6,6 +6,25 @@ import logging as log
 FORMAT = '%(asctime)-15s|%(levelname)-8s %(message)s'
 log.basicConfig(format=FORMAT, level=log.DEBUG)
 
+
+DEFAULT_CONFIG = {
+
+    "infos": {
+        "site" : "Unamed",
+        "url" : "http://localhost:8000",
+    },
+    "dirs" : {
+      "backup" : ".",
+    },
+    "nodes" : {
+        "forward" : [],
+        "fallback" : [],
+        "other" : []
+    },
+
+
+}
+
 class Config(configparser.ConfigParser):
     DIRS="dirs"
     _INSTANCE=None
@@ -35,7 +54,15 @@ class Config(configparser.ConfigParser):
 
 
     def __getitem__(self, item):
-        val = super().get(item[0], item[1])
+        try:
+            val = super().get(item[0], item[1])
+        except configparser.NoOptionError as err:
+            if item[0] in DEFAULT_CONFIG and isinstance(DEFAULT_CONFIG[item[0]], (list, dict)):
+                sec = DEFAULT_CONFIG[item[0]]
+                if item[1] in sec:
+                    return sec[item[1]]
+            raise err
+
         try:
             return json.loads(val)
         except json.decoder.JSONDecodeError:

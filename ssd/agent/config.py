@@ -10,7 +10,6 @@ log.basicConfig(format=FORMAT, level=log.DEBUG)
 
 
 
-
 class Config(configparser.ConfigParser):
     GLOBAL="global"
     _INSTANCE=None
