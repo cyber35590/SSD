@@ -61,7 +61,8 @@ class BackupRequest:
 class ForwardRequest(BackupRequest):
     K_SRC_NODE = 'src_node'
     def __init__(self, backup : dict, myUrl : str):
-        super().__init__(backup.as_dict())
+        print(backup)
+        super().__init__(backup)
         self.src_node = myUrl
 
     def __dict__(self) -> dict:
