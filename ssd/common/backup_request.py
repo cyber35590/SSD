@@ -59,16 +59,8 @@ class BackupRequest:
 
 class ForwardRequest(BackupRequest):
     K_SRC_NODE = 'src_node'
-    def __init__(self, backup, myUrl):
-        super().__init__({
-            BackupRequest.K_CREATION_DATE: backup.creation_date.timestamp(),
-            BackupRequest.K_SIZE: backup.size,
-            BackupRequest.K_HASH: backup.hash,
-            BackupRequest.K_AGENT: backup.agent,
-            BackupRequest.K_AGENT_URL: backup.agent_url,
-            BackupRequest.K_BACKUP_NAME: backup.backup_name,
-            BackupRequest.K_FORWRAD: backup.list_forward_left()
-        })
+    def __init__(self, backup : dict, myUrl : str):
+        super().__init__(backup)
         self.src_node = myUrl
 
     def __dict__(self) -> dict:
