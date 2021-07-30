@@ -93,29 +93,29 @@ class Node(models.Model):
     #todo mettre toutes les requete avec les méthodes get et post
     def update_score(self) -> None:
         t1 = time.time()
-        res = utils.get(self.url+"/backend/ping")
+        url = utils.make_url(self.url, "/node/ping")
+        res = utils.get(url)
         if res.ok():
             self.ping = (time.time() - t1) * 1000
         else:
             log.error("Impossible de joindre le serveur '%s' (%s)"%(
-                    self.url + "/backend/rate", str(res)
+                    url, str(res)
             ))
             self.is_connected=False
             self.ping = INF
             self.rate = 0.0
             return
 
-        data = ""
-        for x in range(Node.RATE_TEST_SIZE): # 64k
-            data+="a"
+        data = "".join(["a" for _ in range(Node.RATE_TEST_SIZE)])
 
         t1 = time.time()
-        res = utils.post(self.url+"/backend/rate")
+        url = utils.make_url(self.url, "/node/ping")
+        res = utils.post(url, data=data)
         if res.ok():
             self.rate = Node.RATE_TEST_SIZE /  (time.time() - t1)
         else:
             log.error("Impossible de joindre le serveur '%s' (%s)"%(
-                    self.url + "/backend/rate", str(res)
+                    url, str(res)
             ))
             self.is_connected=False
             self.ping = INF

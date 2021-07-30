@@ -78,4 +78,13 @@ def post(url, *args, **kwargs) -> SSDError:
         return SSDE_ConnectionError("Impossible de joindre le serveur (%s) : %s" %(url, err.reason), (url,))
     return SSDError.from_json(res.content)
 
+def make_url(*args):
+    out=""
+    for path in args:
+        path=str(path)
+        if path[0] == "/": path = path[1:]
+        if path[-1] != "/" : path+="/"
+        out+=path
+    return out
+
 NoneType=type(None)

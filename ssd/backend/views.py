@@ -36,7 +36,7 @@ def node_infos(request : HttpRequest) -> HttpResponse:
     return response({
         "site" : config["infos", "site"],
         "forward" : config["nodes", "forward"],
-        "other" : config["nodes", "ooher"],
+        "other" : config["nodes", "other"],
         "fallback" : config["nodes", "fallback"],
         "url" : config["infos", "url"]
     })
