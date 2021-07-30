@@ -2,10 +2,12 @@ import os.path
 import time
 from threading import Thread, Lock, Event
 from common.error import *
-from backend.models import Backup, Node
+from backend.models import Backup, Node, BackupError
 from common.backup_request import BackupRequest, ForwardRequest
 from backend.config import config, log
 from common import utils
+from django.db.models import Q
+
 
 class Action:
     MAX_RETRY = 5
@@ -32,6 +34,9 @@ class Action:
     def is_valid(self)  -> bool:
         #todo
         return True
+
+    def error(self, err : SSDError):
+        raise NotImplemented()
 
     def run(self) -> None:
         raise NotImplemented()
@@ -73,6 +78,11 @@ class ActionForward(Action):
         }
         return node.post("/node/forward", files=files, headers=headers)
 
+    def error(self, err : SSDError):
+        backup = Backup.objects.get(id=self.backupid)
+        node = Node.objects.get(id=self.nodeid)
+        BackupError.set_error(backup, node, self.get_error_count(), err)
+
 
     def run(self) -> SSDError:
         backup = Backup.objects.get(id=self.backupid)
@@ -89,7 +99,8 @@ class ActionForward(Action):
 
         if res.err():
             log.error(str(res))
-
+        else:
+            backup.valid_forward(backup, node)
         return res
 
 class ActionRotateBackup(Action):
@@ -184,6 +195,13 @@ class Scheduler(Thread):
             Scheduler._INSTANCE=Scheduler()
         return Scheduler._INSTANCE
 
+    def load_undone_actions(self):
+        l = Backup.objects.filter(~Q(forward_left=None))
+        for backup in l:
+            for node in backup.forward_left.all():
+                self.queue.enqueue(ActionForward(config["infos", "url"], backup.id, node.id))
+                log.debug("Loading Action forward (%s, %d, %d)" % (config["infos","url"], backup.id, node.id))
+
     def stop(self) -> None:
         self.queue.enqueue(None)
 
@@ -191,6 +209,7 @@ class Scheduler(Thread):
         self.queue.interrupt()
 
     def run(self) -> None:
+        self.load_undone_actions()
         while True:
             object = self.queue.dequeue()
             if object is None: return
@@ -204,6 +223,7 @@ class Scheduler(Thread):
                     log.info("L'action a été réinjecté dans la file")
                 else:
                     log.critical("L'action a atteint la limite d'essai maximum... Abandon")
+                    object.error(ret)
 
 
 

@@ -75,7 +75,7 @@ class Node(models.Model):
         return utils.post(url, *args, **kwargs)
 
     def update(self, force=False):
-        if self.last_update.timestamp()+Node.UPDATE_MIN_TIME>datetime.datetime.now().timestamp()\
+        if self.last_update.timestamp()+Node.UPDATE_MIN_TIME<datetime.datetime.now().timestamp()\
                 or force or not self.is_connected:
             try:
                 self.update_infos()
@@ -238,8 +238,16 @@ class Backup(models.Model):
         ret.save()
         return ret
 
+    def valid_forward(self, node : Node) -> None:
+        self.forward_left.remove(node)
+        self.forward_done.add(node)
+        self.save()
+
+
+
+
     @staticmethod
-    def from_token(token):
+    def from_token(token : str):
         res = Backup.objects.filter(request_token__exact=token)
 
         if len(res): return res[0]
@@ -275,3 +283,26 @@ class Backup(models.Model):
             if isinstance(v, datetime.datetime):
                 ret[k] = v.timestamp()
         return ret
+
+
+class BackupError(models.Model):
+    id = models.AutoField(primary_key=True, blank=True, unique=True)
+    backup = models.ForeignKey(Backup, related_name="forward_error", on_delete=models.CASCADE)
+    node = models.ForeignKey(Node, on_delete=models.CASCADE)
+    tries = models.IntegerField(default=0, blank=True)
+    code = models.IntegerField(default=0, blank=True)
+    http_code = models.IntegerField(default=0, blank=True)
+    message = models.TextField(blank=True)
+    content = models.TextField(blank=True)
+    timestamp = models.DateTimeField(blank=True)
+
+    @staticmethod
+    def set_error(backup : Backup, node: Node, tries : int, err : SSDError):
+        be = BackupError(backup=backup, node=node, tries = tries, timestamp=datetime.datetime.now())
+        be.code=err.code
+        be.http_code = 0
+        be.message = str(err)
+        be.content = err.to_json()
+
+        backup.forward_left.remove(node)
+        be.save()

@@ -78,7 +78,6 @@ def get_from_default_config(path : str) -> (dict, list, str, int, float, None):
     return curr
 
 
-
 class Server:
     _INSTANCE = None
 
@@ -142,7 +141,7 @@ class Server:
         # chargement de tous les noeuds connus
         self.nodes.update(allnodes)
         # mise à jour des autres noeuds (éventuels)
-        self.nodes.update()
+        #self.nodes.update()
 
 
         self.forward = [ self.nodes.get(x) for x in self["config.nodes.forward"] ]
