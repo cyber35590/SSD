@@ -107,7 +107,7 @@ def node_forward_request(request : HttpRequest) -> HttpResponse:
 def node_forward(request : HttpRequest) -> HttpResponse:
     if request.method == 'POST':
         hand = Server.get_instance()
-        ret = hand.handle_request(request)
+        ret = hand.handle_backup(request)
         return response(ret)
     else:
         return response(SSDE_MalformedRequest("This url expected only POST requests"))
