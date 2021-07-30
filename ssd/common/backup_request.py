@@ -26,7 +26,8 @@ class BackupRequest:
         elif isinstance(data, dict):
             js=data
         else:
-            raise SSD_BadParameterType("Impoosible de charger la requête, le paramètre du constructeur est invalide", (str, bytes, dict), type(data))
+            raise SSD_BadParameterType("Impoosible de charger la requête, le paramètre du constructeur est invalide (%s, attendu: %s)"%
+                                       (type(data).__name__, str((str, bytes, dict))), (str, bytes, dict), type(data))
         self.js = js
         self.creation_date = js_param(data, BackupRequest.K_CREATION_DATE, time.time())
         self.size = js_param(js, BackupRequest.K_SIZE)
@@ -59,16 +60,11 @@ class BackupRequest:
 
 class ForwardRequest(BackupRequest):
     K_SRC_NODE = 'src_node'
-    def __init__(self, backup, myUrl):
-        super().__init__({
-            BackupRequest.K_CREATION_DATE: backup.creation_date.timestamp(),
-            BackupRequest.K_SIZE: backup.size,
-            BackupRequest.K_HASH: backup.hash,
-            BackupRequest.K_AGENT: backup.agent,
-            BackupRequest.K_AGENT_URL: backup.agent_url,
-            BackupRequest.K_BACKUP_NAME: backup.backup_name,
-            BackupRequest.K_FORWRAD: backup.list_forward_left()
-        })
+    def __init__(self, backup : dict, myUrl : str):
+        if isinstance(backup, dict):
+            super().__init__(backup)
+        else:
+            super().__init__(backup.as_dict())
         self.src_node = myUrl
 
     def __dict__(self) -> dict:

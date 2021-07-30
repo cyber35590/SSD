@@ -25,7 +25,7 @@ def response(val) -> JsonResponse:
 
 
 def get_base(req : HttpRequest):
-    return json.loads(req.body), Server.get_instance()
+    return json.loads(str(req.body, encoding="utf8")), Server.get_instance()
 
 @csrf_exempt
 def node_ping(request : HttpRequest) -> HttpResponse:
@@ -34,7 +34,13 @@ def node_ping(request : HttpRequest) -> HttpResponse:
 @csrf_exempt
 def node_infos(request : HttpRequest) -> HttpResponse:
     return response({
+        "site" : config["infos", "site"],
+        "forward" : config["nodes", "forward"],
+        "other" : config["nodes", "other"],
+        "fallback" : config["nodes", "fallback"],
+        "url" : config["infos", "url"]
     })
+
 
 
 """
@@ -101,7 +107,7 @@ def node_forward_request(request : HttpRequest) -> HttpResponse:
 def node_forward(request : HttpRequest) -> HttpResponse:
     if request.method == 'POST':
         hand = Server.get_instance()
-        ret = hand.handle_request(request)
+        ret = hand.handle_backup(request)
         return response(ret)
     else:
         return response(SSDE_MalformedRequest("This url expected only POST requests"))

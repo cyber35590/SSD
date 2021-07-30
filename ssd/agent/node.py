@@ -6,6 +6,7 @@ import requests
 from common.error import *
 from agent.config import log
 from common import utils
+from common import utils
 
 class Node:
     RATE_BODY_LENGTH=1024*256
@@ -19,16 +20,12 @@ class Node:
 
     def get(self, url, *args, **kwargs) -> SSDError:
         assert(isinstance(url, str))
-        if len(url) and url[0]=='/':
-            url=url[1:]
-        url = self.url + url
+        url = utils.make_url(self.url, url)
         return utils.get(url, *args, **kwargs)
 
     def post(self, url, *args, **kwargs) -> SSDError:
         assert(isinstance(url, str))
-        if len(url) and url[0]=='/':
-            url=url[1:]
-        url = self.url + url
+        url = utils.make_url(self.url, url)
         return utils.post(url, *args, **kwargs)
 
     def get_infos(self) -> (dict, None):

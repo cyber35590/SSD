@@ -8,7 +8,7 @@ from common import utils
 from common.backup_request import BackupRequest, ForwardRequest
 from django.db import models
 from common.error import *
-
+from django.forms.models import model_to_dict
 from .config import config, log
 
 from common.utils import INF, sha3_512_str
@@ -37,7 +37,7 @@ class Value(models.Model):
 
 
 class Node(models.Model):
-    RATE_TEST_SIZE = 128*1024 # Nombre d'octet à envoyer pour tester le débit
+    RATE_TEST_SIZE = 512*1024 # Nombre d'octet à envoyer pour tester le débit
     UPDATE_MIN_TIME = 60*60
 
     id = models.AutoField(primary_key=True, blank=True, unique=True)
@@ -75,15 +75,19 @@ class Node(models.Model):
         return utils.post(url, *args, **kwargs)
 
     def update(self, force=False):
-        if self.last_update.timestamp()+Node.UPDATE_MIN_TIME>datetime.datetime.now().timestamp()\
-                or force:
-            self.update_infos()
-            self.update_score()
-            self.last_update = datetime.datetime.now()
-            self.save()
+        if self.last_update.timestamp()+Node.UPDATE_MIN_TIME<datetime.datetime.now().timestamp()\
+                or force or not self.is_connected:
+            try:
+                self.update_infos()
+                self.update_score()
+                self.last_update = datetime.datetime.now()
+                self.save()
+            except SSD_BadFormatException as err:
+                log.error(str(err))
+                pass
 
     def update_infos(self):
-        ret = self.get("/backend/infos")
+        ret = self.get("/node/infos")
         if ret.ok():
             self.site = ret["site"]
 
@@ -93,34 +97,38 @@ class Node(models.Model):
     #todo mettre toutes les requete avec les méthodes get et post
     def update_score(self) -> None:
         t1 = time.time()
-        res = utils.get(self.url+"/backend/ping")
+        url = utils.make_url(self.url, "/node/ping")
+        res = utils.get(url)
         if res.ok():
             self.ping = (time.time() - t1) * 1000
         else:
             log.error("Impossible de joindre le serveur '%s' (%s)"%(
-                    self.url + "/backend/rate", str(res)
+                    url, str(res)
             ))
             self.is_connected=False
             self.ping = INF
             self.rate = 0.0
             return
 
-        data = ""
-        for x in range(Node.RATE_TEST_SIZE): # 64k
-            data+="a"
+        data = "".join(["a" for _ in range(Node.RATE_TEST_SIZE)])
 
         t1 = time.time()
-        res = utils.post(self.url+"/backend/rate")
+        url = utils.make_url(self.url, "/node/ping")
+        res = utils.post(url, data=data)
         if res.ok():
             self.rate = Node.RATE_TEST_SIZE /  (time.time() - t1)
         else:
             log.error("Impossible de joindre le serveur '%s' (%s)"%(
-                    self.url + "/backend/rate", str(res)
+                    url, str(res)
             ))
             self.is_connected=False
             self.ping = INF
             self.rate = 0.0
             return
+        self.is_connected=True
+        log.debug("Noeud '%s' (ping: %3f, rate: %s/s)" % (
+            self.site, self.ping, format_size(self.rate)
+        ))
 
     @staticmethod
     def from_url(url, create_if_not_exists=False):
@@ -193,7 +201,8 @@ class Backup(models.Model):
     def from_request( bc : BackupRequest):
         creation = datetime.datetime.fromtimestamp(bc.creation_date)
         filename = "%s.tar.xz" %(creation.strftime("%Y_%m_%d__%H_%M_%S"))
-        path = abs_backup(bc.agent, bc.backup_name, filename)
+        path = os.path.normpath(
+            os.path.join(config["dirs","backup"], bc.agent, bc.backup_name, filename))
         token = utils.new_id()
 
         ret = Backup(creation_date=datetime.datetime.fromtimestamp(bc.creation_date),
@@ -229,8 +238,16 @@ class Backup(models.Model):
         ret.save()
         return ret
 
+    def valid_forward(self, node : Node) -> None:
+        self.forward_left.remove(node)
+        self.forward_done.add(node)
+        self.save()
+
+
+
+
     @staticmethod
-    def from_token(token):
+    def from_token(token : str):
         res = Backup.objects.filter(request_token__exact=token)
 
         if len(res): return res[0]
@@ -259,3 +276,33 @@ class Backup(models.Model):
     # permet d'avoir une liste avec les urls des noeuds restants
     def list_forward_left(self, exclude=""):
         return list(map(lambda x: x.url, self.forward_left.filter(~Q(url__exact=exclude))))
+
+    def as_dict(self):
+        ret = model_to_dict(self)
+        for k, v in ret.items():
+            if isinstance(v, datetime.datetime):
+                ret[k] = v.timestamp()
+        return ret
+
+
+class BackupError(models.Model):
+    id = models.AutoField(primary_key=True, blank=True, unique=True)
+    backup = models.ForeignKey(Backup, related_name="forward_error", on_delete=models.CASCADE)
+    node = models.ForeignKey(Node, on_delete=models.CASCADE)
+    tries = models.IntegerField(default=0, blank=True)
+    code = models.IntegerField(default=0, blank=True)
+    http_code = models.IntegerField(default=0, blank=True)
+    message = models.TextField(blank=True)
+    content = models.TextField(blank=True)
+    timestamp = models.DateTimeField(blank=True)
+
+    @staticmethod
+    def set_error(backup : Backup, node: Node, tries : int, err : SSDError):
+        be = BackupError(backup=backup, node=node, tries = tries, timestamp=datetime.datetime.now())
+        be.code=err.code
+        be.http_code = 0
+        be.message = str(err)
+        be.content = err.to_json()
+
+        backup.forward_left.remove(node)
+        be.save()
