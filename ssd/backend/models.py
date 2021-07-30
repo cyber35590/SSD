@@ -37,7 +37,7 @@ class Value(models.Model):
 
 
 class Node(models.Model):
-    RATE_TEST_SIZE = 128*1024 # Nombre d'octet à envoyer pour tester le débit
+    RATE_TEST_SIZE = 512*1024 # Nombre d'octet à envoyer pour tester le débit
     UPDATE_MIN_TIME = 60*60
 
     id = models.AutoField(primary_key=True, blank=True, unique=True)
@@ -125,6 +125,10 @@ class Node(models.Model):
             self.ping = INF
             self.rate = 0.0
             return
+
+        log.debug("Noeud '%s' (ping: %3f, rate: %s/s)" % (
+            self.site, self.ping, format_size(self.rate)
+        ))
 
     @staticmethod
     def from_url(url, create_if_not_exists=False):
