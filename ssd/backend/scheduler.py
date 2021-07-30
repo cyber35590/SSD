@@ -5,7 +5,7 @@ from common.error import *
 from backend.models import Backup, Node
 from common.backup_request import BackupRequest, ForwardRequest
 from backend.config import config, log
-
+from common import utils
 
 class Action:
     MAX_RETRY = 5
