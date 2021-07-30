@@ -288,7 +288,7 @@ class Backup(models.Model):
 
     def get_source(self):
         if self.src_node:
-            return "%s(%s.%s)" % (self.src_node.name, self.agent, self.backup_name)
+            return "%s(%s.%s)" % (self.src_node.site, self.agent, self.backup_name)
         else:
             return "%s.%s" % (self.agent, self.backup_name)
 
