@@ -76,7 +76,7 @@ class Node(models.Model):
 
     def update(self, force=False):
         if self.last_update.timestamp()+Node.UPDATE_MIN_TIME>datetime.datetime.now().timestamp()\
-                or force:
+                or force or not self.is_connected:
             try:
                 self.update_infos()
                 self.update_score()
@@ -125,7 +125,7 @@ class Node(models.Model):
             self.ping = INF
             self.rate = 0.0
             return
-
+        self.is_connected=True
         log.debug("Noeud '%s' (ping: %3f, rate: %s/s)" % (
             self.site, self.ping, format_size(self.rate)
         ))
@@ -201,7 +201,8 @@ class Backup(models.Model):
     def from_request( bc : BackupRequest):
         creation = datetime.datetime.fromtimestamp(bc.creation_date)
         filename = "%s.tar.xz" %(creation.strftime("%Y_%m_%d__%H_%M_%S"))
-        path = abs_backup(bc.agent, bc.backup_name, filename)
+        path = os.path.normpath(
+            os.path.join(config["dirs","backup"], bc.agent, bc.backup_name, filename))
         token = utils.new_id()
 
         ret = Backup(creation_date=datetime.datetime.fromtimestamp(bc.creation_date),

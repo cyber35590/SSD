@@ -59,7 +59,10 @@ class Config(configparser.ConfigParser):
 
 
     def __getitem__(self, item):
-        return json.loads(super().get(item[0], item[1]))
+        try:
+            return json.loads(super().get(item[0], item[1]))
+        except configparser.NoOptionError as err:
+            return None
 
 config_files = ["agent/config.cfg", "agent/config_example.cfg"]
 if "AGENT_CONFIG" in os.environ:

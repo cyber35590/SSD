@@ -51,10 +51,10 @@ class Entry:
     def from_config(entry : str):
         return  Entry({
             "name": entry,
-            "path": get_opt(entry, "path"),
+            "files": get_opt(entry, "files"),
             "node": get_opt(entry, "node"),
             "agent_url" : get_opt("url"),
-            "temp_dir": get_opt(entry, "temp_dir"),
+            "temp_dir": get_opt(entry, "temp"),
             "fallback": get_opt(entry, "fallback"),
             "forward": get_opt(entry, "forward")
         })

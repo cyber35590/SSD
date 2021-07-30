@@ -25,7 +25,7 @@ def response(val) -> JsonResponse:
 
 
 def get_base(req : HttpRequest):
-    return json.loads(req.body), Server.get_instance()
+    return json.loads(str(req.body, encoding="utf8")), Server.get_instance()
 
 @csrf_exempt
 def node_ping(request : HttpRequest) -> HttpResponse:
