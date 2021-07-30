@@ -71,7 +71,7 @@ class ActionForward(Action):
         files = {
             "archive": open(file, "rb")
         }
-        return self.post("/node/forward", files=files, headers=headers)
+        return utils.post("/node/forward", files=files, headers=headers)
 
 
     def run(self) -> SSDError:

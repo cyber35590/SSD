@@ -8,7 +8,7 @@ from common import utils
 from common.backup_request import BackupRequest, ForwardRequest
 from django.db import models
 from common.error import *
-
+from django.forms.models import model_to_dict
 from .config import config, log
 
 from common.utils import INF, sha3_512_str
@@ -268,3 +268,10 @@ class Backup(models.Model):
     # permet d'avoir une liste avec les urls des noeuds restants
     def list_forward_left(self, exclude=""):
         return list(map(lambda x: x.url, self.forward_left.filter(~Q(url__exact=exclude))))
+
+    def as_dict(self):
+        ret = model_to_dict(self)
+        for k, v in ret.items():
+            if isinstance(v, datetime.datetime):
+                ret[k] = v.timestamp()
+        return ret
