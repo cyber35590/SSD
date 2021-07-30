@@ -164,7 +164,11 @@ class Server:
         assert isinstance(data, dict)
         assert isinstance(isForward, bool)
         bcr =   ForwardRequest(data, config["infos", "url"]) if isForward else BackupRequest(data)
-        log.info("Requête de sauvegarde pour %s.%s taille %s" % (bcr.agent,bcr.backup_name, format_size(bcr.size)))
+        if isForward:
+            log.info("Requête de forward  (pour l'agent %s.%s) provenant du noeud %s taille %s" % (
+            bcr.agent, bcr.backup_name, bcr.src_node, format_size(bcr.size)))
+        else:
+            log.info("Requête de sauvegarde pour l'agent %s.%s taille %s" % (bcr.agent,bcr.backup_name, format_size(bcr.size)))
 
         du = shutil.disk_usage(config.get_backup_dir())
         left_after = du.total - du.used - bcr.size
@@ -209,22 +213,28 @@ class Server:
     """
     def handle_backup(self, req : HttpRequest) -> SSDError:
         #vérifications
-        log.debug("Envoi de sauvegarde")
+        log.debug("Récupération de sauvegarde")
         if not "X-upload-token" in req.headers:
             log.error("L'envoi de sauvegarde ne possède pas de token")
             return SSDE_MalformedRequest("L'entête 'X-upload-token' n'est pas passée dans la requête", ["X-upload-token"])
         token = req.headers["X-upload-token"]
 
         backup = Backup.from_token(token)
+
         if not backup:
-            log.error("Le token demandé (%s) ne correspond à aucune requête de sauvegarde connu" % token)
+            log.error("Le token demandé (%s) ne correspond à aucune requête de sauvegarde/forward connu" % token)
             raise SSDE_NotFound("La sauvegarde lié au token '%s' n'existe pas" % token, (token,))
 
         if backup.is_complete:
             log.warning("Le token demandé (%s) a déja été traité" % token)
             raise SSDE_RessourceExists("La sauvegarde lié au token '%s' n'existe pas" % token)
 
-        log.info("Traitement de l'envoi de sauvegarde de %s.%s (%s)" %
+
+        if isinstance(backup, ForwardRequest):
+            log.info("Traitement de la réception de du forward (de l'agent %s.%s) via le noeud %s (%s)" %
+                 (backup.agent,backup.backup_name, backup.src_node, format_size(backup.size)))
+        else:
+            log.info("Traitement de la réception de sauvegarde de %s.%s (%s)" %
                  (backup.agent,backup.backup_name, format_size(backup.size)))
 
 
