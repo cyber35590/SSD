@@ -145,12 +145,10 @@ class SSDE_NoNodeAvailable(SSDError):
     def __init__(self):
         super().__init__(SSDError.UNKNOWN_ERROR, "No node available", [])
 
-
 class SSDE_CorruptedData(SSDError):
     HTTP_STATUS=406
     def __init__(self, msg, args):
         super().__init__(SSDError.CORRUPTED_DATA, msg, args)
-
 
 class SSDE_NoFreeSpace(SSDError):
     HTTP_STATUS=507
