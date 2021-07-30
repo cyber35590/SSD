@@ -16,6 +16,14 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path,include
 
+from django.http import HttpResponse, HttpRequest, JsonResponse
+from common.error import *
+
+from django.views.decorators.csrf import csrf_protect, csrf_exempt
+@csrf_exempt
+def handler404(request : HttpRequest, exception : Exception):
+    return SSDE_NotFound("Path '%s' not found (%s)" % (request.path, str(exception)))
+
 urlpatterns = [
     path('node/', include('backend.urls')),
     path('admin/', admin.site.urls),

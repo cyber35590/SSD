@@ -77,10 +77,14 @@ class Node(models.Model):
     def update(self, force=False):
         if self.last_update.timestamp()+Node.UPDATE_MIN_TIME>datetime.datetime.now().timestamp()\
                 or force:
-            self.update_infos()
-            self.update_score()
-            self.last_update = datetime.datetime.now()
-            self.save()
+            try:
+                self.update_infos()
+                self.update_score()
+                self.last_update = datetime.datetime.now()
+                self.save()
+            except SSD_BadFormatException as err:
+                log.error(str(err))
+                pass
 
     def update_infos(self):
         ret = self.get("/node/infos")

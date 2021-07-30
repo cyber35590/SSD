@@ -85,6 +85,6 @@ def make_url(*args):
         if path[0] == "/": path = path[1:]
         if path[-1] != "/" : path+="/"
         out+=path
-    return out
+    return out if out[-1]!="/" else out[:-1]
 
 NoneType=type(None)

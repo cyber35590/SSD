@@ -107,7 +107,7 @@ class SSDError:
                 js=json.loads(js)
                 return SSDError(js["code"], js["message"], js["args"], js["data"])
             except json.decoder.JSONDecodeError as e:
-                raise SSDE_MalformedJSON(js, e, "Impossible de charger l'erreur depuis le json")
+                raise SSD_BadFormatException(js, e, "Impossible de charger l'erreur depuis le json")
         raise SSD_BadParameterType("SSDError.from_json attend un (str,byte)")
 
 class SSDE_OK(SSDError):

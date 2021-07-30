@@ -41,9 +41,7 @@ def node_infos(request : HttpRequest) -> HttpResponse:
         "url" : config["infos", "url"]
     })
 
-@csrf_exempt
-def error_404(request : HttpRequest):
-    return SSDE_NotFound("Path '%s' not found" % request.path)
+
 
 """
     Renvoi les urls de tous les noeuds connu localement
