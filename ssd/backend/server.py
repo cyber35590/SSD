@@ -111,7 +111,7 @@ class Server:
 
         val = Value.objects.filter(key__exact=item)
         if len(val)==0:
-            val = Value()
+            val = Value(key=item)
         else:
             val=val[0]
         return val.set(value)
