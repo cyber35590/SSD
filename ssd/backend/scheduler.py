@@ -100,7 +100,7 @@ class ActionForward(Action):
         if res.err():
             log.error(str(res))
         else:
-            backup.valid_forward(backup, node)
+            backup.valid_forward(node)
         return res
 
 class ActionRotateBackup(Action):
