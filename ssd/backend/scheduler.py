@@ -218,7 +218,7 @@ class Scheduler(Thread):
                 pass
             else:
                 log.error("L'action n'a pu être effectuée (essai: %d)" % object.get_error_count())
-                if object.get_error_count()<Action.MAX_RETRY and ret.code not in(SSDError.EXISTS):
+                if object.get_error_count()<Action.MAX_RETRY and ret.code not in [SSDError.EXISTS]:
                     self.queue.enqueue(object.clone())
                     log.info("L'action a été réinjecté dans la file")
                 else:
