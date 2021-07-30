@@ -60,7 +60,7 @@ class ActionForward(Action):
         return node.post("/node/forward/request", data=fwr.json())
 
 
-    def upload(self, file : str, token : str) -> SSDError:
+    def upload(self, node : Node, file : str, token : str) -> SSDError:
         assert(isinstance(file, str))
         assert(os.path.isfile(file))
         assert(isinstance(token, str))
@@ -71,7 +71,7 @@ class ActionForward(Action):
         files = {
             "archive": open(file, "rb")
         }
-        return utils.post("/node/forward", files=files, headers=headers)
+        return node.post("/node/forward", files=files, headers=headers)
 
 
     def run(self) -> SSDError:
@@ -85,7 +85,7 @@ class ActionForward(Action):
             return res
 
         token = res["token"]
-        res = self.upload(backup.path, token)
+        res = self.upload(node, backup.path, token)
 
         if res.err():
             log.error(str(res))
