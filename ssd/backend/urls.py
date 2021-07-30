@@ -1,7 +1,7 @@
 from django.urls import path
 
 from . import views
-
+handler404 = 'backend.views.error_404'
 urlpatterns = [
     path('infos', views.node_infos),
     path('ping', views.node_ping),
