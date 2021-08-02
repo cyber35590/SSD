@@ -2,6 +2,7 @@ import hashlib
 import os
 import shutil
 
+from backend.query import Query
 from common.utils import NoneType
 from backend import scheduler
 from common.error import *
@@ -149,6 +150,20 @@ class Server:
         self.other = [ self.nodes.get(x) for x in self["config.nodes.other"] ]
 
 
+    """
+        Répond à l'url /node/present
+        
+    """
+    def handle_node_present(self, data : dict) -> SSDError:
+        assert(isinstance(data, dict))
+        if "url" in data and isinstance(data["url"], str) and \
+            "site" in data and isinstance(data["site"], str) :
+            node = Node.from_present(data)
+            node.update()
+            return SSDE_OK()
+        else:
+            log.warning("Réception de /node/present : attention les données sont malformées")
+            return SSDE_MalformedRequest("Réception de /node/present : attention les données sont malformées")
 
 
     """
@@ -234,14 +249,12 @@ class Server:
                 backup.get_source(), token))
             raise SSDE_RessourceExists("La sauvegarde lié au token '%s' n'existe pas" % token)
 
-
         if isinstance(backup, ForwardRequest):
             log.info("[%s -> self] Traitement de la réception de du forward (de l'agent %s.%s) via le noeud %s (%s)" %
                  (backup.get_source(), backup.agent,backup.backup_name, backup.src_node, format_size(backup.size)))
         else:
             log.info("[%s -> self] Traitement de la réception de sauvegarde de %s.%s (%s)" %
                  (backup.get_source(), backup.agent,backup.backup_name, format_size(backup.size)))
-
 
         #écriture du fichier et update du hash
         path = backup.path
@@ -272,6 +285,10 @@ class Server:
             scheduler.forward_backup(config["infos", "url"], backup)
 
         return SSDE_OK()
+
+
+    def handle_node_query(self, data : dict) -> SSDError:
+        return Query.execute_from_dict(data)
 
 def init():
     Server.get_instance()

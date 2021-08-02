@@ -44,23 +44,17 @@ def node_infos(request : HttpRequest) -> HttpResponse:
 
 
 """
-    Renvoi les urls de tous les noeuds connu localement
-
-"""
-
-
-@csrf_exempt
-def node_list(request: HttpRequest) -> HttpResponse:
-    # todo
-    pass
-
-"""
     Permet à un autre noeud de se faire connaitre    
 """
 @csrf_exempt
-def node_discover(request : HttpRequest) -> HttpResponse:
-    # todo
-    pass
+def node_present(request : HttpRequest) -> HttpResponse:
+    # todo vérification de sécurité....
+    if request.method == "POST":
+        js, serv = get_base(request)
+        return response(serv.handle_node_present(js))
+
+    else:
+        return response(SSDE_NotFound("L'url /node/present ne peut être utilisée qu'avec POST"))
 
 
 
@@ -71,7 +65,12 @@ def node_discover(request : HttpRequest) -> HttpResponse:
 @csrf_exempt
 def node_query(request : HttpRequest) -> HttpResponse:
     # todo
-    pass
+    if request.method == "POST":
+        js, serv = get_base(request)
+        return response(serv.handle_node_query(js))
+    else:
+        return response(SSDE_NotFound("L'url /node/query ne peut être utilisée qu'avec POST"))
+
 
 @csrf_exempt
 def node_backup_request(request : HttpRequest) -> HttpResponse:

@@ -86,6 +86,14 @@ class Node(models.Model):
                 log.error(str(err))
                 pass
 
+    def as_dict(self):
+        return {
+            "site" : self.site,
+            "url" : self.url,
+            "is_connected" : self.is_connected,
+            "last_update" : self.last_update.timestamp()
+        }
+
     def update_infos(self):
         ret = self.get("/node/infos")
         if ret.ok():
@@ -93,8 +101,6 @@ class Node(models.Model):
 
         return ret
 
-
-    #todo mettre toutes les requete avec les méthodes get et post
     def update_score(self) -> None:
         t1 = time.time()
         url = utils.make_url(self.url, "/node/ping")
@@ -129,6 +135,17 @@ class Node(models.Model):
         log.debug("Noeud '%s' (ping: %3f, rate: %s/s)" % (
             self.site, self.ping, format_size(self.rate)
         ))
+
+    @staticmethod
+    def from_present(data : dict):
+        url = data["url"]
+        if url[-1] != '/': url += "/"
+        existing = Node.object.filter(url__exact=url)
+        if len(existing) == 0:
+            node = Node(url=data["url"], site=data["site"])
+        else:
+            node = existing[0]
+        return node
 
     @staticmethod
     def from_url(url, create_if_not_exists=False):

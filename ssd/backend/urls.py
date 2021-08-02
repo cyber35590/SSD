@@ -9,7 +9,6 @@ urlpatterns = [
     path('backup', views.node_backup),
     path('forward/request', views.node_forward_request),
     path('forward', views.node_forward),
-    path('list', views.node_list),
-    path('register', views.node_discover,),
+    path('present', views.node_present,),
     path('query', views.node_query),
 ]
